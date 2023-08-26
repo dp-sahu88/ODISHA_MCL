@@ -2,6 +2,12 @@
 let lineControl;
 let layer;
 lizMap.events.on({
+    uicreated:()=>{
+        var script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/ol@v7.5.1/dist/ol.js';
+        script.async = true;
+        document.body.appendChild(script);
+    },
     layersadded: () => {
         let layers = getAllLayersName()
         let layerOption = ''
