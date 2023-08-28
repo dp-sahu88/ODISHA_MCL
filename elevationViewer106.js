@@ -4,6 +4,7 @@ var vectorLayer
 var getFeatureInfoControl;
 var line
 var LineEndPoints = [];
+var elvData = [];
 lizMap.events.on({
     layersadded: () => {
         let layers = getAllLayersName()
@@ -24,6 +25,9 @@ lizMap.events.on({
             layer = getLayerByname(e.target.value)
             if (layer != '') {
                 addGetFeatureInfoControl()
+            }
+            else{
+                clearGetFeatureInfoControl()
             }
         })
     },
@@ -61,7 +65,7 @@ function onMapClick(evt) {
         var end = feature.geometry.getVertices()[0];
         line = new OpenLayers.Geometry.LineString([start, end]);
         vectorLayer.addFeatures([new OpenLayers.Feature.Vector(line)]);
-        getFeatureInfo(LineEndPoints)
+        loadFeatureInfo(LineEndPoints)
         LineEndPoints = []
     } else {
         // Clear previous features and start a new line
@@ -100,13 +104,12 @@ function addGetFeatureInfoControl(){
         }
     });
     getFeatureInfoControl.events.register('getfeatureinfo', getFeatureInfoControl, e=>{handelGetInfo(e)})
-    // getFeatureInfoControl.events.register('nogetfeatureinfo', getFeatureInfoControl, (e)=>{console.log(e);})
-    getFeatureInfoControl.events.register('beforegetfeatureinfo', getFeatureInfoControl, e=>{handelBeforeGetInfo(e)})
     map.addControl(getFeatureInfoControl);
 }
 
 function handelGetInfo(e){
-    console.log("After: ",e)
+    let jsondata = parseTableToJSON(e.text)
+    elvData.push(jsondata[0])
     var point = map.getLonLatFromPixel(e.xy);
     var feature = new OpenLayers.Feature.Vector(
         new OpenLayers.Geometry.Point(point.lon, point.lat)
@@ -114,26 +117,22 @@ function handelGetInfo(e){
     vectorLayer.addFeatures([feature]);
 }
 
-function handelBeforeGetInfo(e){
-    console.log("Before",e)
-}
-
- function getFeatureInfo(lineEndPoints){
+ function loadFeatureInfo(lineEndPoints){
     if(!getFeatureInfoControl){
         return;
     }
-    getFeatureInfoControl.activate()
+    // getFeatureInfoControl.activate()
     console.log(lineEndPoints);
     var pixel1 = lineEndPoints[0];
     var pixel2 = lineEndPoints[1];
     var pixels = getIntermediatePixels(pixel1, pixel2);
-    pixels.forEach(({x,y})=>{
-        document.elementFromPoint(x,y).hover()
-        
+    pixels.forEach((point)=>{
+        getFeatureInfoControl.getInfoForClick({xy:point})
     })
-    console.log(pixels);
+    console.log(elvData)
     //gate the steps and simulate click
-    getFeatureInfoControl.deactivate()
+    // getFeatureInfoControl.deactivate()
+    
  }
 
 function getIntermediatePixels(pixel1, pixel2) {
@@ -162,35 +161,6 @@ function getIntermediatePixels(pixel1, pixel2) {
   return intermediatePixels;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 function getLayerByname(name) {
     let currentLayers = Object.values(lizMap.map.layers)
     let layer;
@@ -211,4 +181,41 @@ function getAllLayersName() {
         layersName.push(l.name)
     });
     return layersName
+}
+
+function parseTableToJSON(tableString) {
+   var tempContainer = document.createElement('div');
+  
+  // Set the innerHTML to your table string
+  tempContainer.innerHTML = tableString;
+  
+  // Access the table element(s) within tempContainer
+  var tableElement = tempContainer.querySelector('table');
+  // Access the rows of the table
+  var rows = tableElement.rows;
+  
+  // Create an array to store the JSON objects
+  var jsonData = [];
+  
+  // Loop through each row
+  for (var i = 1; i < rows.length; i++) {
+    var row = rows[i];
+    
+    // Create an object to store the cell data
+    var rowData = {};
+    
+    // Loop through each cell in the row
+    for (var j = 0; j < row.cells.length; j++) {
+      var cell = row.cells[j];
+      
+      // Use the cell's header as the key and cell's value as the value in rowData
+      rowData[tableElement.rows[0].cells[j].textContent.trim()] = cell.textContent.trim();
+    }
+    
+    // Add the rowData object to the jsonData array
+    jsonData.push(rowData);
+  }
+  
+  // Return the JSON data
+  return jsonData;
 }
