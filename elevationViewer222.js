@@ -316,7 +316,7 @@ function drawChart() {
             },
         }
     });
-    console.log(myChart)
+    // console.log(myChart)
 }
 
 
