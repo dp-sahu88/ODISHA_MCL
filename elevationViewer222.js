@@ -9,10 +9,10 @@ var myChart;
 var points = [];
 lizMap.events.on({
     layersadded: () => {
-        addMiniDoc()
+        addBottomDock()
         addChartjs()
     },
-    minidockopened: (e) => {
+    bottomdockopened: (e) => {
         if (e.id == 'ElevationProfile') {
             map = lizMap.map
             vectorLayer = new OpenLayers.Layer.Vector("ElvProfileLine");
@@ -20,12 +20,17 @@ lizMap.events.on({
             map.events.register("click", map, onMapClick);
         }
     },
-    minidockclosed: (e) => {
+    bottomdockclosed: (e) => {
         if (e.id == 'ElevationProfile') {
-            map.events.un("click", onMapClick);
+            map.events.unregister("click", map, onMapClick);
+            layer = undefined
             vectorLayer.removeAllFeatures()
             map.removeLayer(vectorLayer);
-            $('#dsm-layer-selector').value = ''
+            vectorLayer = undefined
+            elvData = []
+            updateChart()
+            $('#dsm-layer-selector').val('').change()
+            clearGetFeatureInfoControl()
         }
     }
 }
@@ -38,6 +43,7 @@ function onMapClick(evt) {
     var feature = new OpenLayers.Feature.Vector(
         new OpenLayers.Geometry.Point(point.lon, point.lat)
     );
+    // console.log(vectorLayer.features.length)
     if (vectorLayer.features.length === 0) {
         vectorLayer.addFeatures([feature]);
     } else if (vectorLayer.features.length === 1) {
@@ -46,7 +52,9 @@ function onMapClick(evt) {
         var end = feature.geometry.getVertices()[0];
         var line = new OpenLayers.Geometry.LineString([start, end]);
         vectorLayer.addFeatures([new OpenLayers.Feature.Vector(line)]);
-        loadFeatureInfo(LineEndPoints)
+        if (layer) {
+            loadFeatureInfo(LineEndPoints)
+        }
         LineEndPoints = []
     } else {
         // Clear previous features and start a new line
@@ -58,9 +66,11 @@ function onMapClick(evt) {
 }
 
 function clearGetFeatureInfoControl() {
-    getFeatureInfoControl.deactivate();
-    map.removeControl(getFeatureInfoControl);
-    getFeatureInfoControl = null
+    if (getFeatureInfoControl) {
+        getFeatureInfoControl.deactivate();
+        map.removeControl(getFeatureInfoControl);
+        getFeatureInfoControl = null
+    }
 }
 
 function addGetFeatureInfoControl() {
@@ -92,8 +102,10 @@ function addGetFeatureInfoControl() {
 
 function handelGetInfo(e) {
     let jsondata = parseTableToJSON(e.text)
+    if (jsondata.length == 0) {
+        return
+    }
     let value = jsondata[0].Value || jsondata[0].value
-
     var point = map.getLonLatFromPixel(e.xy);
     if (value) {
         elvData.push({
@@ -103,11 +115,8 @@ function handelGetInfo(e) {
         })
     }
     if (point.lon == points[points.length - 1].lon && point.lat == points[points.length - 1].lat) {
-        console.log(elvData)
-        myChart.data.labels = elvData.map(d => d.x)
-        myChart.data.datasets[0].data = elvData.map(d => d.value)
-        console.log('going to update', elvData)
-        myChart.update()
+        generateDistance()
+        updateChart()
     }
     var feature = new OpenLayers.Feature.Vector(
         new OpenLayers.Geometry.Point(point.lon, point.lat)
@@ -120,7 +129,7 @@ function loadFeatureInfo(lineEndPoints) {
         return;
     }
     // getFeatureInfoControl.activate()
-    console.log(lineEndPoints);
+    // console.log(lineEndPoints);
     var pixel1 = lineEndPoints[0];
     var pixel2 = lineEndPoints[1];
     points = getIntermediatePoints(pixel1, pixel2);
@@ -180,6 +189,10 @@ function getAllLayersName() {
 }
 
 function parseTableToJSON(tableString) {
+
+    if (tableString == '') {
+        return []
+    }
     var tempContainer = document.createElement('div');
 
     // Set the innerHTML to your table string
@@ -216,8 +229,7 @@ function parseTableToJSON(tableString) {
     return jsonData;
 }
 
-
-function addMiniDoc() {
+function addBottomDock() {
     let layers = getAllLayersName()
     let layerOption = ''
     layers.forEach(l => {
@@ -229,9 +241,10 @@ function addMiniDoc() {
                     <option value="">Select DSM Layer</option>
                     ${layerOption}
                     </select>
+                    <button id="exportBtn">Export Data</button>
                 </div>
            `;
-    lizMap.addDock("ElevationProfile", "Elevation", "minidock", template, "icon-signal");
+    lizMap.addDock("ElevationProfile", "Elevation", "bottomdock", template, "icon-signal");
     $('#dsm-layer-selector').on('change', (e) => {
         layer = getLayerByname(e.target.value)
         if (layer != '') {
@@ -251,10 +264,14 @@ function addChartjs() {
     chartScript.onload = () => {
         let elvChartContainer = document.createElement('div')
         elvChartContainer.id = 'elvChartContainer'
+        elvChartContainer.style = "position: relative; height:40vh; width:100%; margin:auto;"
         elvChartContainer.innerHTML = `<canvas id="elvChart"></canvas>`
-        document.body.append(elvChartContainer)
+        $('#ElevationProfile').append(elvChartContainer)
         chartReady = true
         drawChart()
+        $('#exportBtn').on('click', (e) => {
+            exportToExcel()
+        })
     }
 }
 
@@ -272,7 +289,12 @@ function drawChart() {
                 data: elvData.map(data => data.value),
                 backgroundColor: 'rgba(255, 99, 132, 0.2)',
                 borderColor: 'rgba(255, 99, 132, 1)',
-                borderWidth: 1
+                borderWidth: 1,
+                pointRadius: 2,
+                pointHoverRadius: 3,
+                pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                pointBorderColor: 'rgba(255, 99, 132, 1)',
+                pointHoverBackgroundColor: 'rgba(255, 99, 132, 1)',
             }]
         }
         ,
@@ -280,17 +302,67 @@ function drawChart() {
             scales: {
                 y: {
                     ticks: {
-                        beginAtZero: true
+                        beginAtZero: true,
+                        color: 'white'
                     }
                 },
                 x: {
                     ticks: {
                         autoSkip: true,
-                        maxTicksLimit: 20
+                        maxTicksLimit: 20,
+                        color: 'white'
                     }
-                }
-            }
+                },
+            },
         }
     });
     console.log(myChart)
+}
+
+
+function exportToExcel() {
+    if (elvData.length == 0) {
+        return
+    }
+    // Step 1: Convert array of objects to CSV format
+    const csvContent = elvData.map(obj => Object.values(obj).join(',')).join('\n');
+
+    // Step 2: Create data URI for CSV content
+    const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent);
+
+    // Step 3: Simulate click event to download Excel file
+    let fileName = 'edall_map_goto'+Date.now()+'.csv'
+    const link = document.createElement('a');
+    link.setAttribute('href', dataUri);
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function updateChart() {
+    myChart.data.labels = elvData.map(d => d.distance)
+    myChart.data.datasets[0].data = elvData.map(d => d.value)
+    // console.log('going to update', elvData)
+    myChart.update()
+    myChart.resize()
+}
+
+function generateDistance() {
+    let initialPoint = points[0]
+    elvData = elvData.map(value => {
+        value.distance = getDistance(initialPoint, value)
+        return value
+    })
+}
+
+function getDistance(point1, point2) {
+    // console.log(point1, point2)
+    let lonlat1 = { lon: point1.lon, lat: point1.lat }
+    let lonlat2 = { lon: point2.x, lat: point2.y }
+    let point_1 = new OpenLayers.Geometry.Point(lonlat1.lon, lonlat1.lat)
+    let point_2 = new OpenLayers.Geometry.Point(lonlat2.lon, lonlat2.lat)
+    var distance = point_1.distanceTo(point_2);
+    var formattedDistance = distance.toFixed(2) + " m";
+    return formattedDistance
 }
