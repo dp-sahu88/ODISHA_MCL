@@ -8,6 +8,7 @@ var chartReady = false
 var myChart;
 var points = [];
 var highlightLayer;
+
 lizMap.events.on({
     layersadded: () => {
         addBottomDock()
@@ -66,7 +67,6 @@ function onMapClick(evt) {
     var feature = new OpenLayers.Feature.Vector(
         new OpenLayers.Geometry.Point(point.lon, point.lat)
     );
-    // console.log(vectorLayer.features.length)
     if (vectorLayer.features.length === 0) {
         vectorLayer.addFeatures([feature]);
         elvData = []
@@ -142,7 +142,9 @@ function handelGetInfo(e) {
         })
     }
     if (point.lon == points[points.length - 1].lon && point.lat == points[points.length - 1].lat) {
+        lizMap.map.getControlsByClass('OpenLayers.Control.Navigation')[0].enableZoomWheel()
         generateDistance()
+        shortByDistance()
         updateChart()
     }
     var feature = new OpenLayers.Feature.Vector(
@@ -156,13 +158,13 @@ function loadFeatureInfo(lineEndPoints) {
         return;
     }
     // getFeatureInfoControl.activate()
-    // console.log(lineEndPoints);
     var pixel1 = lineEndPoints[0];
     var pixel2 = lineEndPoints[1];
     points = getIntermediatePoints(pixel1, pixel2);
-    points.forEach((point) => {
+    lizMap.map.getControlsByClass('OpenLayers.Control.Navigation')[0].disableZoomWheel()
+    points.forEach(async (point) => {
         var xy = map.getPixelFromLonLat(point)
-        getFeatureInfoControl.getInfoForClick({ xy: xy })
+        await getFeatureInfoControl.getInfoForClick({ xy: xy })
     })
 
 }
@@ -264,12 +266,19 @@ function addBottomDock() {
         layerOption += `<option value="${l}">${l}</option>`
     })
     const template = `
-                <div class="form-group">
-                    <select class="form-control" id="dsm-layer-selector">
-                    <option value="">Select DSM Layer</option>
-                    ${layerOption}
+                <div class="form-group" style="margin:4px;">
+                    <select class="form-control" id="dsm-layer-selector" style="height:1.5rem;  margin:0;">
+                        <option value="">Select DSM Layer</option>
+                        ${layerOption}
                     </select>
-                    <button id="exportBtn">Export Data</button>
+                   
+                    <div style="display:inline; margin-left:10px"> 
+                        <button type="button" id="exportElvChart" class="btn btn-primary" style="height:1.7rem; margin:0;" >Export </button>
+                        <select id="ExportChartAs" style="height:1.5rem; margin:0;">
+                            <option value="csv">As CSV</option>
+                            <option value="jpg">As JPG</option>
+                        </select>
+                    </div>
                 </div>
            `;
     lizMap.addDock("ElevationProfile", "Elevation", "bottomdock", template, "icon-signal");
@@ -297,8 +306,16 @@ function addChartjs() {
         $('#ElevationProfile').append(elvChartContainer)
         chartReady = true
         drawChart()
-        $('#exportBtn').on('click', (e) => {
-            exportToExcel()
+        $('#exportElvChart').on('click', (e) => {
+            let exportFormat = $('#ExportChartAs').val()
+            if (exportFormat == 'jpg') {
+                exportCanvasAsJPG()
+            }else{
+                exportToExcel()
+            }
+        })
+        $('#exportElvJPGBtn').on('click', (e) => {
+            exportCanvasAsJPG()
         })
     }
 }
@@ -347,13 +364,35 @@ function drawChart() {
                     ticks: {
                         beginAtZero: true,
                         color: 'grey'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Elevation',
+                        color: '#911',
+                        font: {
+                            family: 'Times',
+                            size: 20,
+                            weight: 'bold',
+                            lineHeight: 1.2,
+                        }
                     }
                 },
                 x: {
                     ticks: {
                         autoSkip: true,
                         maxTicksLimit: 20,
-                        color: 'grey'
+                        color: 'grey',
+                    }, 
+                    title: {
+                        display: true,
+                        text: 'Distance',
+                        color: '#911',
+                        font: {
+                            family: 'Times',
+                            size: 20,
+                            weight: 'bold',
+                            lineHeight: 1.2,
+                        }
                     }
                 },
             },
@@ -376,7 +415,6 @@ function drawChart() {
         },
         plugins: [plugin],
     });
-    // console.log(myChart)
 }
 
 
@@ -401,9 +439,14 @@ function exportToExcel() {
 }
 
 function updateChart() {
-    myChart.data.labels = elvData.map(d => d.distance)
+    myChart.data.labels = elvData.map(d => {
+        let value = d.distance;
+        let values = value.split(" ")
+        console.log(values)
+        let numberStr = parseFloat(values[0])
+        return Math.round(numberStr) + " " + values[1]
+    })
     myChart.data.datasets[0].data = elvData.map(d => d.value)
-    // console.log('going to update', elvData)
     myChart.update()
     myChart.resize()
 }
@@ -411,35 +454,49 @@ function updateChart() {
 function generateDistance() {
     let initialPoint = points[0]
     elvData = elvData.map(value => {
-        value.distance = getDistance(initialPoint, value)
+        let result = getDistance(initialPoint, value)
+        value.distance = result.distance
+        value.distance_m = result.distance_m
         return value
     })
 }
 
 function getDistance(point1, point2) {
-    // console.log(point1, point2)
     let lonlat1 = { lon: point1.lon, lat: point1.lat }
     let lonlat2 = { lon: point2.x, lat: point2.y }
     let point_1 = new OpenLayers.Geometry.Point(lonlat1.lon, lonlat1.lat)
     let point_2 = new OpenLayers.Geometry.Point(lonlat2.lon, lonlat2.lat)
     var distance = point_1.distanceTo(point_2);
-    var formattedDistance = distance.toFixed(2) + " m";
+    var formattedDistance = {
+        distance: distance < 1000 ? distance.toFixed(2) + " m" : (distance / 1000).toFixed(2) + " km",
+        distance_m: distance
+    };
     return formattedDistance
 }
-
+function shortByDistance() {
+    elvData = elvData.sort((a, b) => a.distance_m - b.distance_m)
+}
 function heighlightPoint(point) {
     highlightLayer.removeAllFeatures();
     let index = point.index
-    console.log(index)
     if (elvData[index]) {
-        console.log(elvData[index])
-        // let pointlonLat = {
-        //     lon: elvData[index].x,
-        //     lat: elvData[index].y
-        // }
         var feature = new OpenLayers.Feature.Vector(
             new OpenLayers.Geometry.Point(elvData[index].x, elvData[index].y)
         );
         highlightLayer.addFeatures([feature]);
     }
+}
+function exportCanvasAsJPG() {
+  const canvas = document.getElementById("elvChart");
+  
+  // Convert canvas to image data URL
+  const dataURL = canvas.toDataURL("image/jpeg");
+
+  // Create an anchor element to trigger the download
+  const downloadLink = document.createElement("a");
+  downloadLink.href = dataURL;
+  downloadLink.download = 'edall_map_goto' + Date.now() + '.jpg';
+  
+  // Programmatically click the download link
+  downloadLink.click();
 }
