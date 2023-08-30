@@ -7,6 +7,7 @@ var elvData = [];
 var chartReady = false
 var myChart;
 var points = [];
+var highlightLayer;
 lizMap.events.on({
     layersadded: () => {
         addBottomDock()
@@ -18,6 +19,23 @@ lizMap.events.on({
             vectorLayer = new OpenLayers.Layer.Vector("ElvProfileLine");
             map.addLayer(vectorLayer);
             map.events.register("click", map, onMapClick);
+        }
+        if (highlightLayer == undefined) {
+            var highlightStyle = new OpenLayers.Style({
+                graphicName: "circle",
+                fillColor: "#ff0000",
+                fillOpacity: 0.8,
+                strokeWidth: 2,
+                strokeColor: "#ffffff",
+                strokeOpacity: 1,
+                pointRadius: 6
+            });
+            highlightLayer = new OpenLayers.Layer.Vector('HighlightLayer', {
+                styleMap: new OpenLayers.StyleMap({
+                    "default": highlightStyle
+                })
+            })
+            map.addLayer(highlightLayer)
         }
     },
     bottomdockclosed: (e) => {
@@ -31,6 +49,11 @@ lizMap.events.on({
             updateChart()
             $('#dsm-layer-selector').val('').change()
             clearGetFeatureInfoControl()
+
+            if (highlightLayer) {
+                map.removeLayer(highlightLayer)
+                highlightLayer = undefined
+            }
         }
     }
 }
@@ -46,6 +69,8 @@ function onMapClick(evt) {
     // console.log(vectorLayer.features.length)
     if (vectorLayer.features.length === 0) {
         vectorLayer.addFeatures([feature]);
+        elvData = []
+        updateChart()
     } else if (vectorLayer.features.length === 1) {
         vectorLayer.addFeatures([feature]);
         var start = vectorLayer.features[0].geometry.getVertices()[0];
@@ -59,7 +84,7 @@ function onMapClick(evt) {
     } else {
         // Clear previous features and start a new line
         elvData = []
-
+        updateChart()
         vectorLayer.removeAllFeatures();
         vectorLayer.addFeatures([feature]);
     }
@@ -179,6 +204,7 @@ function getLayerByname(name) {
     }
     return false
 }
+
 function getAllLayersName() {
     let currentLayers = Object.values(lizMap.map.layers)
     let layersName = []
@@ -280,6 +306,20 @@ function drawChart() {
         return
     }
     var ctx = document.getElementById('elvChart').getContext('2d');
+    // var gradient = ctx.createLinearGradient(0, 0, 0, 300);
+    // gradient.addColorStop(0, 'rgba(49, 182, 235, 1)');
+    // gradient.addColorStop(1, 'rgba(100, 100, 0,0.1)');
+    const plugin = {
+        id: 'customCanvasBackgroundColor',
+        beforeDraw: (chart, args, options) => {
+            const { ctx } = chart;
+            ctx.save();
+            ctx.globalCompositeOperation = 'destination-over';
+            ctx.fillStyle = options.color || '#99ffff';
+            ctx.fillRect(0, 0, chart.width, chart.height);
+            ctx.restore();
+        }
+    };
     myChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -287,14 +327,15 @@ function drawChart() {
             datasets: [{
                 label: 'Elevation',
                 data: elvData.map(data => data.value),
-                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                borderColor: 'rgba(255, 99, 132, 1)',
+                // backgroundColor: gradient,
+                // fill:true,
+                borderColor: 'rgba(255, 0, 0, 1)',
                 borderWidth: 1,
-                pointRadius: 2,
-                pointHoverRadius: 3,
-                pointBackgroundColor: 'rgba(255, 99, 132, 1)',
-                pointBorderColor: 'rgba(255, 99, 132, 1)',
-                pointHoverBackgroundColor: 'rgba(255, 99, 132, 1)',
+                pointRadius: 1,
+                pointHoverRadius: 5,
+                // pointBackgroundColor: 'rgba(49, 182, 235, 1)',
+                // pointBorderColor: 'rgba(49, 182, 235, 1)',
+                // pointHoverBackgroundColor: 'rgba(49, 182, 235, 1)',
             }]
         }
         ,
@@ -303,18 +344,35 @@ function drawChart() {
                 y: {
                     ticks: {
                         beginAtZero: true,
-                        color: 'white'
+                        color: 'grey'
                     }
                 },
                 x: {
                     ticks: {
                         autoSkip: true,
                         maxTicksLimit: 20,
-                        color: 'white'
+                        color: 'grey'
                     }
                 },
             },
-        }
+            resize: true,
+            maintainAspectRatio: false,
+            plugins: {
+                customCanvasBackgroundColor: {
+                    color: 'white',
+                }
+            },
+            hover: {
+                mode: 'index',
+                intersect: false
+            },
+            onHover: (event, chartElement) => {
+                if (chartElement.length > 0) {
+                    heighlightPoint(chartElement[0])
+                }
+            }
+        },
+        plugins: [plugin],
     });
     // console.log(myChart)
 }
@@ -331,7 +389,7 @@ function exportToExcel() {
     const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent);
 
     // Step 3: Simulate click event to download Excel file
-    let fileName = 'edall_map_goto'+Date.now()+'.csv'
+    let fileName = 'edall_map_goto' + Date.now() + '.csv'
     const link = document.createElement('a');
     link.setAttribute('href', dataUri);
     link.setAttribute('download', fileName);
@@ -365,4 +423,21 @@ function getDistance(point1, point2) {
     var distance = point_1.distanceTo(point_2);
     var formattedDistance = distance.toFixed(2) + " m";
     return formattedDistance
+}
+
+function heighlightPoint(point) {
+    highlightLayer.removeAllFeatures();
+    let index = point.index
+    console.log(index)
+    if (elvData[index]) {
+        console.log(elvData[index])
+        // let pointlonLat = {
+        //     lon: elvData[index].x,
+        //     lat: elvData[index].y
+        // }
+        var feature = new OpenLayers.Feature.Vector(
+            new OpenLayers.Geometry.Point(elvData[index].x, elvData[index].y)
+        );
+        highlightLayer.addFeatures([feature]);
+    }
 }
