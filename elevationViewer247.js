@@ -71,6 +71,7 @@ function onMapClick(evt) {
         vectorLayer.addFeatures([feature]);
         elvData = []
         updateChart()
+        highlightLayer.removeAllFeatures();
     } else if (vectorLayer.features.length === 1) {
         vectorLayer.addFeatures([feature]);
         var start = vectorLayer.features[0].geometry.getVertices()[0];
@@ -87,6 +88,7 @@ function onMapClick(evt) {
         updateChart()
         vectorLayer.removeAllFeatures();
         vectorLayer.addFeatures([feature]);
+        highlightLayer.removeAllFeatures();
     }
 }
 
