@@ -9,6 +9,7 @@ var myChart;
 var points = [];
 var highlightLayer;
 
+
 lizMap.events.on({
     layersadded: () => {
         addBottomDock()
@@ -144,6 +145,7 @@ function handelGetInfo(e) {
     if (points.length == elvData.length) {
         lizMap.map.getControlsByClass('OpenLayers.Control.Navigation')[0].enableZoomWheel()
         generateDistance()
+        generateSlope()
         shortByDistance()
         updateChart()
     }
@@ -354,6 +356,14 @@ function drawChart() {
                 // pointBorderColor: 'rgba(49, 182, 235, 1)',
                 // pointHoverBackgroundColor: 'rgba(49, 182, 235, 1)',
                 tension:0.2
+            },{
+                label: 'Slope',
+                data: elvData.map(data => data.slope||0),
+                borderColor: 'rgba(0, 0, 240, 1)',
+                borderWidth: 1,
+                pointRadius: 1,
+                pointHoverRadius: 5,
+                tension:0.2
             }]
         }
         ,
@@ -366,7 +376,7 @@ function drawChart() {
                     },
                     title: {
                         display: true,
-                        text: 'Elevation',
+                        text: 'Elevation/Slope',
                         color: '#911',
                         font: {
                             family: 'Times',
@@ -442,7 +452,8 @@ function updateChart() {
         let value = d.distance_m;
         return Math.round(value) + " m" 
     })
-    myChart.data.datasets[0].data = elvData.map(d => d.value)
+    myChart.data.datasets[0].data = elvData.map(d => d.value||0)
+    myChart.data.datasets[1].data = elvData.map(d => d.slope||0)
     myChart.update()
     myChart.resize()
 }
@@ -469,6 +480,32 @@ function getDistance(point1, point2) {
     };
     return formattedDistance
 }
+
+function generateSlope(){
+    if (elvData.length == 0){
+        return
+    }
+    let previous = elvData[0]
+    elvData = elvData.map(value => {
+        let slope = getSlope(previous, value)
+        previous = value
+        value.slope = slope
+        return value
+    })
+}
+
+function getSlope(point1, point2) {
+    let lonlat1 = { lon: point1.x, lat: point1.y }
+    let lonlat2 = { lon: point2.x, lat: point2.y }
+    let point_1 = new OpenLayers.Geometry.Point(lonlat1.lon, lonlat1.lat)
+    let point_2 = new OpenLayers.Geometry.Point(lonlat2.lon, lonlat2.lat)
+    var distance = point_1.distanceTo(point_2);
+    var elevationDif = Math.abs(point1.value - point2.value)
+    var slope = elevationDif / distance
+    console.log(elevationDif,distance, slope)
+    return slope
+}
+
 function shortByDistance() {
     elvData = elvData.sort((a, b) => a.distance_m - b.distance_m)
 }
