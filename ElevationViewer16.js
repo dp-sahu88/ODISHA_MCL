@@ -10,7 +10,7 @@ var points = [];
 var highlightLayer;
 var loadingObj = {
     isLoading: false,
-    message: "",
+    message: "Loading:",
     min:0,
     max:100,
     value:0
@@ -22,8 +22,9 @@ var loading = new Proxy(loadingObj,{
                 $('#elvChartLoading').css({display:"none"})
             }else{
                 $('#elvChartLoading').css({display:"inline"})
-                
-
+                $('#elvChartLoadingMsg').text(target.message)
+                $('#elvChartLoadingBar').text((target.value||0)+ "/" + (target.max||100))
+                $('#elvChartLoadingBar').attr({min : target.min || 0, max : target.max || 100, value : target.value || 0})
             }
             return true
     }
@@ -82,6 +83,9 @@ lizMap.events.on({
 
 function onMapClick(evt) {
     evt.preventDefault()
+    if (loading.isLoading){
+        return
+    }
     var point = map.getLonLatFromPixel(evt.xy);
     LineEndPointsLonLat.push(point)
     var feature = new OpenLayers.Feature.Vector(
@@ -161,10 +165,14 @@ function handelGetInfo(e) {
             value: value
         })
     }
+    
+    loading.value = 1 + loading.value
+    // console.log(typeof(loading.value), loading.value)
     if (points.length == elvData.length) {
+        loading.value =0
+        loading.message = "Rendering"
         lizMap.map.getControlsByClass('OpenLayers.Control.Navigation')[0].enableZoomWheel()
-        generateDistance()
-        generateSlope()
+        generateDistanceAndSlope()
         shortByDistance()
         updateChart()
     }
@@ -178,8 +186,12 @@ function loadFeatureInfo() {
     if (!getFeatureInfoControl) {
         return;
     }
-    points = getIntermediatePointsLonLat(LineEndPointsLonLat) 
+    points = getIntermediatePointsLonLat(LineEndPointsLonLat)
     lizMap.map.getControlsByClass('OpenLayers.Control.Navigation')[0].disableZoomWheel()
+    loading.max= points.length
+    loading.value=0
+    loading.message = "Fetching"
+    loading.isLoading= true
     points.forEach(async (point) => {
         var xy = map.getPixelFromLonLat(point)
         await getFeatureInfoControl.getInfoForClick({ xy: xy })
@@ -478,6 +490,7 @@ function updateChart() {
     myChart.data.datasets[0].data = elvData.map(d => d.value||0)
     myChart.data.datasets[1].data = elvData.map(d => d.slope||0)
     myChart.update()
+    loading.isLoading= false
     myChart.resize()
 }
 
@@ -485,6 +498,22 @@ function generateDistance() {
     let initialPoint = points[0]
     elvData = elvData.map(value => {
         let result = getDistance(initialPoint, value)
+        value.distance = result.distance
+        value.distance_m = result.distance_m
+        return value
+    })
+}
+function generateDistanceAndSlope() {
+    if (elvData.length == 0){
+        return
+    }
+    let initialPoint = points[0]
+    let previous = elvData[0]
+    elvData = elvData.map(value => {
+        let result = getDistance(initialPoint, value)
+        let slope = getSlope(previous, value)
+        previous = value
+        value.slope = slope
         value.distance = result.distance
         value.distance_m = result.distance_m
         return value
@@ -525,7 +554,7 @@ function getSlope(point1, point2) {
     var distance = point_1.distanceTo(point_2);
     var elevationDif = Math.abs(point1.value - point2.value)
     var slope = elevationDif / distance
-    console.log(elevationDif,distance, slope)
+    // console.log(elevationDif,distance, slope)
     return slope
 }
 
