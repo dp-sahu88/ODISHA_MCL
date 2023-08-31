@@ -2,7 +2,7 @@ let layer;
 let map;
 var vectorLayer
 var getFeatureInfoControl;
-var LineEndPoints = [];
+var LineEndPointsLonLat = [];
 var elvData = [];
 var chartReady = false
 var myChart;
@@ -50,7 +50,7 @@ lizMap.events.on({
             updateChart()
             $('#dsm-layer-selector').val('').change()
             clearGetFeatureInfoControl()
-
+            LineEndPointsLonLat = []
             if (highlightLayer) {
                 map.removeLayer(highlightLayer)
                 highlightLayer = undefined
@@ -63,7 +63,7 @@ lizMap.events.on({
 function onMapClick(evt) {
     evt.preventDefault()
     var point = map.getLonLatFromPixel(evt.xy);
-    LineEndPoints.push(evt.xy);
+    LineEndPointsLonLat.push(point)
     var feature = new OpenLayers.Feature.Vector(
         new OpenLayers.Geometry.Point(point.lon, point.lat)
     );
@@ -79,9 +79,9 @@ function onMapClick(evt) {
         var line = new OpenLayers.Geometry.LineString([start, end]);
         vectorLayer.addFeatures([new OpenLayers.Feature.Vector(line)]);
         if (layer) {
-            loadFeatureInfo(LineEndPoints)
+            loadFeatureInfo()
         }
-        LineEndPoints = []
+        LineEndPointsLonLat = []
     } else {
         // Clear previous features and start a new line
         elvData = []
@@ -141,7 +141,8 @@ function handelGetInfo(e) {
             value: value
         })
     }
-    if (point.lon == points[points.length - 1].lon && point.lat == points[points.length - 1].lat) {
+    console.log(elvData, elvData.length, points.length)
+    if (points.length == elvData.length) {
         lizMap.map.getControlsByClass('OpenLayers.Control.Navigation')[0].enableZoomWheel()
         generateDistance()
         shortByDistance()
@@ -153,14 +154,12 @@ function handelGetInfo(e) {
     vectorLayer.addFeatures([feature]);
 }
 
-function loadFeatureInfo(lineEndPoints) {
+function loadFeatureInfo() {
     if (!getFeatureInfoControl) {
         return;
     }
-    // getFeatureInfoControl.activate()
-    var pixel1 = lineEndPoints[0];
-    var pixel2 = lineEndPoints[1];
-    points = getIntermediatePoints(pixel1, pixel2);
+    console.log(LineEndPointsLonLat)
+    points = getIntermediatePointsLonLat(LineEndPointsLonLat) 
     lizMap.map.getControlsByClass('OpenLayers.Control.Navigation')[0].disableZoomWheel()
     points.forEach(async (point) => {
         var xy = map.getPixelFromLonLat(point)
@@ -497,4 +496,27 @@ function exportCanvasAsJPG() {
   
   // Programmatically click the download link
   downloadLink.click();
+}
+function getIntermediatePointsLonLat(lonlats){
+    if(lonlats.length<0){
+        return []
+    }
+    let point1 = lonlats[0]
+    let point2 = lonlats[1]
+    let detailsLevel = 500
+    let lon1 = point1.lon
+    let lat1 = point1.lat
+    let lon2 = point2.lon
+    let lat2 = point2.lat
+    let deltaLon = lon2-lon1
+    let deltaLat = lat2-lat1
+    let lonStep = deltaLon/detailsLevel
+    let latStep = deltaLat/detailsLevel
+    let points = []
+    for(let i=0;i<detailsLevel;i++){
+        let lon = lon1+lonStep*i
+        let lat = lat1+latStep*i
+        points.push({lon:lon,lat:lat})
+    }
+    return points
 }
