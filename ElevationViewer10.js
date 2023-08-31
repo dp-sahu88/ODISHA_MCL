@@ -8,7 +8,26 @@ var chartReady = false
 var myChart;
 var points = [];
 var highlightLayer;
+var loadingObj = {
+    isLoading: false,
+    message: "",
+    min:0,
+    max:100,
+    value:0
+}
+var loading = new Proxy(loadingObj,{
+    set: function(target, prop, value) {
+            target[prop] = value
+            if (!target.isLoading){
+                $('#elvChartLoading').css({display:"none"})
+            }else{
+                $('#elvChartLoading').css({display:"inline"})
+                
 
+            }
+            return true
+    }
+})
 
 lizMap.events.on({
     layersadded: () => {
@@ -278,6 +297,10 @@ function addBottomDock() {
                             <option value="csv">As CSV</option>
                             <option value="jpg">As JPG</option>
                         </select>
+                    </div>
+                    <div id="elvChartLoading" style="display:none">
+                        <label for="elvChartLoadingBar" style="color:#ffffff; display:inline; margin-left:20px" id="elvChartLoadingMsg">Loading:</label>
+                        <meter min="0" max="100" value="50" id="elvChartLoadingBar" style="height:1rem; width:10rem">...</meter>
                     </div>
                 </div>
            `;

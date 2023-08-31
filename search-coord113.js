@@ -119,7 +119,7 @@ function getLonlatDM() {
     const latRegex = /(\d+)°(\d+\.?\d+?)'([NS])/;
     const lonMatches = longitudeInput.match(lonRegex);
     const latMatches = latitudeInput.match(latRegex);
-    console.log(latMatches,lonMatches)
+    // console.log(latMatches,lonMatches)
     const lonDegrees = parseInt(lonMatches[1]) + parseFloat(lonMatches[2]) / 60;
     const latDegrees = parseInt(latMatches[1]) + parseFloat(latMatches[2]) / 60;
     const lonSign = lonMatches[4] === 'W' ? -1 : 1;
@@ -144,7 +144,7 @@ function getLonlatDMS() {
 
     const latitudeMatch = latitudeInput.match(latitudeRegex);
     const longitudeMatch = longitudeInput.match(longitudeRegex);
-    console.log(latitudeMatch, longitudeMatch)
+    // console.log(latitudeMatch, longitudeMatch)
     const latitude = latitudeMatch ? parseInt(latitudeMatch[1]) + (parseInt(latitudeMatch[2]) / 60) + (parseFloat(latitudeMatch[3]) / 3600) : null;
     const longitude = longitudeMatch ? parseInt(longitudeMatch[1]) + (parseInt(longitudeMatch[2]) / 60) + (parseFloat(longitudeMatch[3]) / 3600) : null;
 
@@ -186,7 +186,7 @@ let KMLpointStyle = `
 
 function exportLayer(e) {
     var layer = getLayerByname('GoTo_layer')
-    console.log(layer)
+    // console.log(layer)
     if (!layer) {
         return
     }
@@ -215,7 +215,7 @@ function genXML(features) {
 }
 
 function getPlaceMarks(features) {
-    console.log(features);
+    // console.log(features);
     let placemarks = ``;
     features.forEach(
         (feature, index) => {
