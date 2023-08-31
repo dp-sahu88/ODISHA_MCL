@@ -141,7 +141,6 @@ function handelGetInfo(e) {
             value: value
         })
     }
-    console.log(elvData, elvData.length, points.length)
     if (points.length == elvData.length) {
         lizMap.map.getControlsByClass('OpenLayers.Control.Navigation')[0].enableZoomWheel()
         generateDistance()
@@ -158,7 +157,6 @@ function loadFeatureInfo() {
     if (!getFeatureInfoControl) {
         return;
     }
-    console.log(LineEndPointsLonLat)
     points = getIntermediatePointsLonLat(LineEndPointsLonLat) 
     lizMap.map.getControlsByClass('OpenLayers.Control.Navigation')[0].disableZoomWheel()
     points.forEach(async (point) => {
@@ -270,7 +268,8 @@ function addBottomDock() {
                         <option value="">Select DSM Layer</option>
                         ${layerOption}
                     </select>
-                   
+                    <label for="elvDataDetailsLevel" style="color:#ffffff; display:inline;">Details level:</label>
+                    <input type="range" min="1" max="13" value="3" step="1" id="elvDataDetailsLevel">
                     <div style="display:inline; margin-left:10px"> 
                         <button type="button" id="exportElvChart" class="btn btn-primary" style="height:1.7rem; margin:0;" >Export </button>
                         <select id="ExportChartAs" style="height:1.5rem; margin:0;">
@@ -503,7 +502,8 @@ function getIntermediatePointsLonLat(lonlats){
     }
     let point1 = lonlats[0]
     let point2 = lonlats[1]
-    let detailsLevel = 500
+    let detailsLevelInput = $('#elvDataDetailsLevel').val()
+    let detailsLevel = parseInt(detailsLevelInput) * 100
     let lon1 = point1.lon
     let lat1 = point1.lat
     let lon2 = point2.lon
