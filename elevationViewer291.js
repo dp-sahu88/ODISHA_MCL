@@ -355,6 +355,7 @@ function drawChart() {
                 // pointBackgroundColor: 'rgba(49, 182, 235, 1)',
                 // pointBorderColor: 'rgba(49, 182, 235, 1)',
                 // pointHoverBackgroundColor: 'rgba(49, 182, 235, 1)',
+                tension:0.2
             }]
         }
         ,
@@ -440,11 +441,8 @@ function exportToExcel() {
 
 function updateChart() {
     myChart.data.labels = elvData.map(d => {
-        let value = d.distance;
-        let values = value.split(" ")
-        console.log(values)
-        let numberStr = parseFloat(values[0])
-        return Math.round(numberStr) + " " + values[1]
+        let value = d.distance_m;
+        return Math.round(value) + " m" 
     })
     myChart.data.datasets[0].data = elvData.map(d => d.value)
     myChart.update()
