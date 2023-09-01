@@ -240,7 +240,7 @@ function getLayerByname(name) {
 }
 
 function getAllLayersName() {
-    let currentLayers = Object.values(lizMap.map.layers)
+    let currentLayers = Object.values(lizMap.config.layers)
     let layersName = []
     currentLayers.forEach(l => {
         layersName.push(l.name)
