@@ -70,6 +70,7 @@ lizMap.events.on({
             elvData = []
             updateChart()
             $('#dsm-layer-selector').val('').change()
+            lizMap.map.getControlsByClass('OpenLayers.Control.Navigation')[0].enableZoomWheel()
             clearGetFeatureInfoControl()
             LineEndPointsLonLat = []
             if (highlightLayer) {
