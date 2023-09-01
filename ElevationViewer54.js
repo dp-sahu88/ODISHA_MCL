@@ -11,22 +11,24 @@ var highlightLayer;
 var loadingObj = {
     isLoading: false,
     message: "Loading:",
-    min:0,
-    max:100,
-    value:0
+    min: 0,
+    max: 100,
+    value: 0
 }
-var loading = new Proxy(loadingObj,{
-    set: function(target, prop, value) {
-            target[prop] = value
-            if (!target.isLoading){
-                $('#elvChartLoading').css({display:"none"})
-            }else{
-                $('#elvChartLoading').css({display:"inline"})
-                $('#elvChartLoadingMsg').text(target.message)
-                $('#elvChartLoadingBar').text((target.value||0)+ "/" + (target.max||100))
-                $('#elvChartLoadingBar').attr({min : target.min || 0, max : target.max || 100, value : target.value || 0})
-            }
-            return true
+var loading = new Proxy(loadingObj, {
+    set: function (target, prop, value) {
+        target[prop] = value
+        if (!target.isLoading) {
+            $('#elvChartLoading').css({ display: "none" })
+            $('#elvProfShpInput').css({ display: "inline" })
+        } else {
+            $('#elvChartLoading').css({ display: "inline" })
+            $('#elvProfShpInput').css({ display: "none" })
+            $('#elvChartLoadingMsg').text(target.message)
+            $('#elvChartLoadingBar').text((target.value || 0) + "/" + (target.max || 100))
+            $('#elvChartLoadingBar').attr({ min: target.min || 0, max: target.max || 100, value: target.value || 0 })
+        }
+        return true
     }
 })
 
@@ -84,7 +86,7 @@ lizMap.events.on({
 
 function onMapClick(evt) {
     evt.preventDefault()
-    if (loading.isLoading){
+    if (loading.isLoading) {
         return
     }
     var point = map.getLonLatFromPixel(evt.xy);
@@ -166,11 +168,11 @@ function handelGetInfo(e) {
             value: value
         })
     }
-    
+
     loading.value = 1 + loading.value
     // console.log(typeof(loading.value), loading.value)
     if (points.length == elvData.length) {
-        loading.value =0
+        loading.value = 0
         loading.message = "Rendering"
         lizMap.map.getControlsByClass('OpenLayers.Control.Navigation')[0].enableZoomWheel()
         generateDistanceAndSlope()
@@ -189,10 +191,10 @@ function loadFeatureInfo() {
     }
     points = getIntermediatePointsLonLat(LineEndPointsLonLat)
     lizMap.map.getControlsByClass('OpenLayers.Control.Navigation')[0].disableZoomWheel()
-    loading.max= points.length
-    loading.value=0
+    loading.max = points.length
+    loading.value = 0
     loading.message = "Fetching"
-    loading.isLoading= true
+    loading.isLoading = true
     points.forEach(async (point) => {
         var xy = map.getPixelFromLonLat(point)
         await getFeatureInfoControl.getInfoForClick({ xy: xy })
@@ -200,31 +202,6 @@ function loadFeatureInfo() {
 
 }
 
-function getIntermediatePoints(pixel1, pixel2) {
-    const intermediatePoints = [];
-
-    // Calculate the difference in x and y values between the two pixels
-    const deltaX = pixel2.x - pixel1.x;
-    const deltaY = pixel2.y - pixel1.y;
-
-    // Determine the distance between the two pixels
-    const distance = Math.max(Math.abs(deltaX), Math.abs(deltaY));
-
-    // Calculate the step size in x and y directions
-    const stepX = deltaX / distance;
-    const stepY = deltaY / distance;
-
-    // Add the intermediate pixels
-    for (let i = 0; i <= distance; i++) {
-        const intermediatePixel = {
-            x: Math.round(pixel1.x + (stepX * i)),
-            y: Math.round(pixel1.y + (stepY * i))
-        };
-        let point = map.getLonLatFromPixel(intermediatePixel)
-        intermediatePoints.push(point);
-    }
-    return intermediatePoints;
-}
 
 function getLayerByname(name) {
     let currentLayers = Object.values(lizMap.map.layers)
@@ -315,6 +292,10 @@ function addBottomDock() {
                         <label for="elvChartLoadingBar" style="color:#ffffff; display:inline; margin-left:20px" id="elvChartLoadingMsg">Loading:</label>
                         <meter min="0" max="100" value="50" id="elvChartLoadingBar" style="height:1rem; width:10rem">...</meter>
                     </div>
+                    <div id="elvProfShpInput" style="display:inline; margin-left:20px;">
+                        <label for="elvProfShpFileInput" class="btn btn-primary"><i class="icon-file"></i> Choose file</label>
+                        <input type="file" id="elvProfShpFileInput" accept=".kml" hidden=true/>
+                    </div>
                 </div>
            `;
     lizMap.addDock("ElevationProfile", "Elevation", "bottomdock", template, "icon-signal");
@@ -326,6 +307,10 @@ function addBottomDock() {
         else {
             clearGetFeatureInfoControl()
         }
+    })
+    $('#elvProfShpFileInput').on('change', (e) => {
+        e.preventDefault()
+        handelImportFile(e)
     })
 }
 
@@ -346,7 +331,7 @@ function addChartjs() {
             let exportFormat = $('#ExportChartAs').val()
             if (exportFormat == 'jpg') {
                 exportCanvasAsJPG()
-            }else{
+            } else {
                 exportToExcel()
             }
         })
@@ -391,15 +376,15 @@ function drawChart() {
                 // pointBackgroundColor: 'rgba(49, 182, 235, 1)',
                 // pointBorderColor: 'rgba(49, 182, 235, 1)',
                 // pointHoverBackgroundColor: 'rgba(49, 182, 235, 1)',
-                tension:0.2
-            },{
+                tension: 0.2
+            }, {
                 label: 'Slope',
-                data: elvData.map(data => data.slope||0),
+                data: elvData.map(data => data.slope || 0),
                 borderColor: 'rgba(0, 0, 240, 1)',
                 borderWidth: 1,
                 pointRadius: 1,
                 pointHoverRadius: 5,
-                tension:0.2
+                tension: 0.2
             }]
         }
         ,
@@ -427,7 +412,7 @@ function drawChart() {
                         autoSkip: true,
                         maxTicksLimit: 20,
                         color: 'grey',
-                    }, 
+                    },
                     title: {
                         display: true,
                         text: 'Distance',
@@ -486,12 +471,12 @@ function exportToExcel() {
 function updateChart() {
     myChart.data.labels = elvData.map(d => {
         let value = d.distance_m;
-        return Math.round(value) + " m" 
+        return Math.round(value) + " m"
     })
-    myChart.data.datasets[0].data = elvData.map(d => d.value||0)
-    myChart.data.datasets[1].data = elvData.map(d => d.slope||0)
+    myChart.data.datasets[0].data = elvData.map(d => d.value || 0)
+    myChart.data.datasets[1].data = elvData.map(d => d.slope || 0)
     myChart.update()
-    loading.isLoading= false
+    loading.isLoading = false
     myChart.resize()
 }
 
@@ -505,7 +490,7 @@ function generateDistance() {
     })
 }
 function generateDistanceAndSlope() {
-    if (elvData.length == 0){
+    if (elvData.length == 0) {
         return
     }
     let initialPoint = points[0]
@@ -534,8 +519,8 @@ function getDistance(point1, point2) {
     return formattedDistance
 }
 
-function generateSlope(){
-    if (elvData.length == 0){
+function generateSlope() {
+    if (elvData.length == 0) {
         return
     }
     let previous = elvData[0]
@@ -573,40 +558,147 @@ function heighlightPoint(point) {
     }
 }
 function exportCanvasAsJPG() {
-  const canvas = document.getElementById("elvChart");
-  
-  // Convert canvas to image data URL
-  const dataURL = canvas.toDataURL("image/jpeg");
+    const canvas = document.getElementById("elvChart");
 
-  // Create an anchor element to trigger the download
-  const downloadLink = document.createElement("a");
-  downloadLink.href = dataURL;
-  downloadLink.download = 'edall_map_goto' + Date.now() + '.jpg';
-  
-  // Programmatically click the download link
-  downloadLink.click();
+    // Convert canvas to image data URL
+    const dataURL = canvas.toDataURL("image/jpeg");
+
+    // Create an anchor element to trigger the download
+    const downloadLink = document.createElement("a");
+    downloadLink.href = dataURL;
+    downloadLink.download = 'edall_map_goto' + Date.now() + '.jpg';
+
+    // Programmatically click the download link
+    downloadLink.click();
 }
-function getIntermediatePointsLonLat(lonlats){
-    if(lonlats.length<0){
+function getIntermediatePointsLonLat(lonlats) {
+    if (lonlats.length < 0) {
         return []
     }
-    let point1 = lonlats[0]
-    let point2 = lonlats[1]
+    let pointratio = getIntermediatePointRatio(lonlats)
+    console.log(pointratio)
     let detailsLevelInput = $('#elvDataDetailsLevel').val()
     let detailsLevel = parseInt(detailsLevelInput) * 100
+    let point1 = lonlats[0]
+    let point2 = lonlats[1]
     let lon1 = point1.lon
     let lat1 = point1.lat
     let lon2 = point2.lon
     let lat2 = point2.lat
-    let deltaLon = lon2-lon1
-    let deltaLat = lat2-lat1
-    let lonStep = deltaLon/detailsLevel
-    let latStep = deltaLat/detailsLevel
+    let deltaLon = lon2 - lon1
+    let deltaLat = lat2 - lat1
+    let lonStep = deltaLon / detailsLevel
+    let latStep = deltaLat / detailsLevel
     let points = []
-    for(let i=0;i<detailsLevel;i++){
-        let lon = lon1+lonStep*i
-        let lat = lat1+latStep*i
-        points.push({lon:lon,lat:lat})
+    for (let i = 0; i < detailsLevel; i++) {
+        let lon = lon1 + lonStep * i
+        let lat = lat1 + latStep * i
+        points.push({ lon: lon, lat: lat })
     }
     return points
+}
+
+function handelImportFile(evt) {
+    loading.isLoading = true
+    loading.message = "Reading File"
+    let file = evt.target.files[0]
+    let reader = new FileReader()
+    let fileName = file.name
+    let fileExt = fileName.split('.').pop().toLowerCase()
+    reader.onload = (e) => {
+        let data = e.target.result
+        if (fileExt == "kml" || fileExt == "xml") {
+            handelKMLData(data)
+        }
+        // console.log(data)
+        loading.isLoading = false
+    }
+    reader.readAsText(file)
+    // console.log(e.target.files[0])
+}
+
+function handelKMLData(data) {
+    // console.log(data);
+    let xmlFormat = new OpenLayers.Format.XML({})
+    let xml = xmlFormat.read(data)
+    let features = xml.getElementsByTagName("LineString")
+    if (features.length > 0) {
+        handelLineString(features[0])
+    }
+    // console.log(features)
+}
+
+function handelLineString(feature) {
+    let coordinates = feature.getElementsByTagName("coordinates")
+    let vertices = []
+
+    vertices = coordinates[0].childNodes[0].nodeValue.split(' ')
+    vertices = vertices.map(value => {
+        let lonLat = value.split(",")
+        return [parseFloat(lonLat[0]), parseFloat(lonLat[1])]
+    })
+
+    // console.log(vertices)
+
+    let linePoints = generatePointGeometry(vertices)
+    let lines = genetateLineGeometry(linePoints.points)
+    console.log(linePoints)
+    vectorLayer.removeAllFeatures();
+    vectorLayer.addFeatures([...linePoints.points, ...lines])
+    getIntermediatePointsLonLat(linePoints.lonlat)
+}
+
+function generatePointGeometry(vertices) {
+    let result = {
+        lonlat: [],
+        points: []
+    }
+    var projectProjection = lizMap.config.options?.qgisProjectProjection?.ref || "EPSG:4326"
+    for (let i = 0; i < vertices.length; i++) {
+        longitude = vertices[i][0]
+        latitude = vertices[i][1]
+        var lonLatPoint = new OpenLayers.Geometry.Point(longitude, latitude).transform(
+            new OpenLayers.Projection(projectProjection),
+            lizMap.map.getProjectionObject()
+        );
+        var pointFeature = new OpenLayers.Feature.Vector(lonLatPoint);
+        result.lonlat.push(lonLatPoint)
+        result.points.push(pointFeature)
+    }
+    return result
+}
+
+function genetateLineGeometry(points) {
+    if (points.length == 0) {
+        return []
+    }
+    let result = []
+    for (let i = 1; i < points.length; i++) {
+        let point1 = points[i - 1].geometry.getVertices()[0]
+        let point2 = points[i].geometry.getVertices()[0]
+        let line = new OpenLayers.Feature.Vector(new OpenLayers.Geometry.LineString([point1, point2]))
+        result.push(line)
+    }
+    // console.log(result)
+    return result
+}
+
+function getIntermediatePointRatio(lonlats){
+    if (lonlats.length<2){
+        return 0
+    }
+    let totalDistance = 0
+    let lineLengths = []
+    for (let i = 0; i < lonlats.length-1; i++) {
+        let lon1 = lonlats[i].x || lonlats[i].lon
+        let lat1 = lonlats[i].y || lonlats[i].lat
+        let lon2 = lonlats[i + 1].x || lonlats[i+1].lon
+        let lat2 = lonlats[i + 1].y || lonlats[i+1].lat
+        let deltaLon = lon2 - lon1
+        let deltaLat = lat2 - lat1
+        let lineLength = Math.sqrt(deltaLon * deltaLon + deltaLat * deltaLat)
+        lineLengths.push(lineLength)
+        totalDistance += lineLength
+    }
+    return lineLengths.map(l => l/totalDistance)
 }
