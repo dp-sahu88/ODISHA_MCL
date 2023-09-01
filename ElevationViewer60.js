@@ -5,6 +5,7 @@ var getFeatureInfoControl;
 var LineEndPointsLonLat = [];
 var elvData = [];
 var chartReady = false
+var lineBreakPoints = []
 var myChart;
 var points = [];
 var highlightLayer;
@@ -190,16 +191,7 @@ function loadFeatureInfo() {
         return;
     }
     points = getIntermediatePointsLonLat(LineEndPointsLonLat)
-    lizMap.map.getControlsByClass('OpenLayers.Control.Navigation')[0].disableZoomWheel()
-    loading.max = points.length
-    loading.value = 0
-    loading.message = "Fetching"
-    loading.isLoading = true
-    points.forEach(async (point) => {
-        var xy = map.getPixelFromLonLat(point)
-        await getFeatureInfoControl.getInfoForClick({ xy: xy })
-    })
-
+    requestPointsData()
 }
 
 
@@ -575,26 +567,48 @@ function getIntermediatePointsLonLat(lonlats) {
     if (lonlats.length < 0) {
         return []
     }
-    let pointratio = getIntermediatePointRatio(lonlats)
-    console.log(pointratio)
+    let points = []
     let detailsLevelInput = $('#elvDataDetailsLevel').val()
     let detailsLevel = parseInt(detailsLevelInput) * 100
-    let point1 = lonlats[0]
-    let point2 = lonlats[1]
-    let lon1 = point1.lon
-    let lat1 = point1.lat
-    let lon2 = point2.lon
-    let lat2 = point2.lat
-    let deltaLon = lon2 - lon1
-    let deltaLat = lat2 - lat1
-    let lonStep = deltaLon / detailsLevel
-    let latStep = deltaLat / detailsLevel
-    let points = []
-    for (let i = 0; i < detailsLevel; i++) {
-        let lon = lon1 + lonStep * i
-        let lat = lat1 + latStep * i
-        points.push({ lon: lon, lat: lat })
+    let pointratio = getIntermediatePointRatio(lonlats, detailsLevel)
+    console.log(pointratio)
+    
+    for (i = 0; i< lonlats.length-1; i++ )
+    {
+        let point1 = lonlats[i]
+        let point2 = lonlats[i+1]
+        let lon1 = point1.lon || point1.x
+        let lat1 = point1.lat || point1.y
+        let lon2 = point2.lon || point2.x
+        let lat2 = point2.lat || point2.y
+        let deltaLon = lon2 - lon1
+        let deltaLat = lat2 - lat1
+        let lonStep = deltaLon / pointratio[i]
+        let latStep = deltaLat / pointratio[i]
+        for (let j = 0; j < pointratio[i]; j++) {
+            let lon = lon1 + lonStep * j
+            let lat = lat1 + latStep * j
+            points.push({ lon: lon, lat: lat })
+        }
+
     }
+    // let point1 = lonlats[0]
+    // let point2 = lonlats[1]
+    // let lon1 = point1.lon
+    // let lat1 = point1.lat
+    // let lon2 = point2.lon
+    // let lat2 = point2.lat
+    // let deltaLon = lon2 - lon1
+    // let deltaLat = lat2 - lat1
+    // let lonStep = deltaLon / detailsLevel
+    // let latStep = deltaLat / detailsLevel
+
+    // for (let i = 0; i < detailsLevel; i++) {
+    //     let lon = lon1 + lonStep * i
+    //     let lat = lat1 + latStep * i
+    //     points.push({ lon: lon, lat: lat })
+    // }
+    console.log(points)
     return points
 }
 
@@ -645,7 +659,8 @@ function handelLineString(feature) {
     console.log(linePoints)
     vectorLayer.removeAllFeatures();
     vectorLayer.addFeatures([...linePoints.points, ...lines])
-    getIntermediatePointsLonLat(linePoints.lonlat)
+    points = getIntermediatePointsLonLat(linePoints.lonlat)
+    requestPointsData()
 }
 
 function generatePointGeometry(vertices) {
@@ -683,7 +698,7 @@ function genetateLineGeometry(points) {
     return result
 }
 
-function getIntermediatePointRatio(lonlats){
+function getIntermediatePointRatio(lonlats, detailsLevel){
     if (lonlats.length<2){
         return 0
     }
@@ -700,5 +715,28 @@ function getIntermediatePointRatio(lonlats){
         lineLengths.push(lineLength)
         totalDistance += lineLength
     }
-    return lineLengths.map(l => l/totalDistance)
+    return lineLengths.map(l => {
+        let numberOfPoints = Math.round((l/totalDistance) * detailsLevel)
+        return numberOfPoints
+    })
+}
+
+function requestPointsData() {
+    if(!getFeatureInfoControl){
+        console.log("please select a DSM layer")
+        return
+    }
+    if (points.length< 0){
+        console.log("Unable to find a point.")
+        return
+    }
+    lizMap.map.getControlsByClass('OpenLayers.Control.Navigation')[0].disableZoomWheel()
+    loading.max = points.length
+    loading.value = 0
+    loading.message = "Fetching"
+    loading.isLoading = true
+    points.forEach(async (point) => {
+        var xy = map.getPixelFromLonLat(point)
+        await getFeatureInfoControl.getInfoForClick({ xy: xy })
+    })
 }
