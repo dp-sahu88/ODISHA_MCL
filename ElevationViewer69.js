@@ -176,7 +176,7 @@ function handelGetInfo(e) {
 
     loading.value = 1 + loading.value
     // console.log(typeof(loading.value), loading.value)
-    if (points.length == elvData.length) {
+    if (loading.max == elvData.length) {
         loading.value = 0
         loading.message = "Rendering"
         lizMap.map.getControlsByClass('OpenLayers.Control.Navigation')[0].enableZoomWheel()
@@ -581,12 +581,13 @@ function getIntermediatePointsLonLat(lonlats) {
         let deltaLat = lat2 - lat1
         let lonStep = deltaLon / pointratio[i]
         let latStep = deltaLat / pointratio[i]
+        let linePoints = []
         for (let j = 0; j < pointratio[i]; j++) {
             let lon = lon1 + lonStep * j
             let lat = lat1 + latStep * j
-            points.push({ lon: lon, lat: lat })
+            linePoints.push({ lon: lon, lat: lat })
         }
-
+        points.push(linePoints)
     }
     // let point1 = lonlats[0]
     // let point2 = lonlats[1]
@@ -739,8 +740,15 @@ function requestPointsData() {
     loading.isLoading = true
     elvData = []
     updateChart()
-    points.forEach(async (point) => {
-        var xy = map.getPixelFromLonLat(point)
-        await getFeatureInfoControl.getInfoForClick({ xy: xy })
-    })
+    for (i=0;i<points.length; i++){
+        points[i].forEach(async (point) => {
+            var xy = map.getPixelFromLonLat(point)
+            await getFeatureInfoControl.getInfoForClick({ xy: xy })
+        })
+        loading.message = "Loading(" + (i+1) + "/" + points.length +")"
+        loading.max = points[i].length
+        while(loading.isLoading){
+            sleep(1000)
+        }
+    }
 }
