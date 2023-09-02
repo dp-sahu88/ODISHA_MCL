@@ -1,6 +1,7 @@
 let layer;
 let map;
-var vectorLayer
+var vectorLayer;
+var fetchedLines;
 var getFeatureInfoControl;
 var LineEndPointsLonLat = [];
 var elvData = [];
@@ -175,7 +176,6 @@ function handelGetInfo(e) {
     }
 
     loading.value = 1 + loading.value
-    // console.log(typeof(loading.value), loading.value)
     if (loading.max == elvData.length) {
         loading.value = 0
         loading.message = "Rendering"
@@ -195,6 +195,7 @@ function loadFeatureInfo() {
         return;
     }
     points = getIntermediatePointsLonLat(LineEndPointsLonLat)
+    console.log(points)
     requestPointsData()
 }
 // returns the layer by name
@@ -478,41 +479,28 @@ function generateDistanceAndSlope() {
     if (elvData.length == 0) {
         return
     }
-    let initialDistance = 0
     let initialPoint = points[0]
     let previous = elvData[0]
     elvData = elvData.map(value => {
-        let result = getDistance(initialPoint, value, initialDistance)
+        let result = getDistance(initialPoint, value)
         let slope = getSlope(previous, value)
         previous = value
         value.slope = slope
         value.distance = result.distance
         value.distance_m = result.distance_m
-        initialDistance = result.initialDistance
-        initialPoint = result.initialPoint
         return value
     })
 }
 // calculate distance between two points
-function getDistance(point1, point2 , initialDistance) {
-    let lonlat1 = { lon: point1.lon || point1.x, lat: point1.lat || point1.y }
+function getDistance(point1, point2) {
+    let lonlat1 = { lon: point1.lon , lat: point1.lat}
     let lonlat2 = { lon: point2.x, lat: point2.y }
     let point_1 = new OpenLayers.Geometry.Point(lonlat1.lon, lonlat1.lat)
     let point_2 = new OpenLayers.Geometry.Point(lonlat2.lon, lonlat2.lat)
-    var distance = point_1.distanceTo(point_2) + initialDistance;
-    var nextInitialPoint = point1;
-    // console.log(lineBreakPoints.lon, lonlat2.lon)
-    if (lineBreakPoints.lon.includes(lonlat2.lon) && lineBreakPoints.lat.includes(lonlat2.lat)){
-        console.log("matched")
-        initialDistance = distance
-        console.log(initialDistance);
-        nextInitialPoint = point2
-    }
+    var distance = point_1.distanceTo(point_2);
     var formattedDistance = {
         distance: distance < 1000 ? distance.toFixed(2) + " m" : (distance / 1000).toFixed(2) + " km",
         distance_m: distance,
-        initialDistance: initialDistance,
-        initialPoint : nextInitialPoint
     };
     return formattedDistance
 }
@@ -525,7 +513,6 @@ function getSlope(point1, point2) {
     var distance = point_1.distanceTo(point_2);
     var elevationDif = Math.abs(point1.value - point2.value)
     var slope = elevationDif / distance
-    // console.log(elevationDif,distance, slope)
     return slope
 }
 // short elvData by distance
@@ -567,7 +554,6 @@ function getIntermediatePointsLonLat(lonlats) {
     let detailsLevelInput = $('#elvDataDetailsLevel').val()
     let detailsLevel = parseInt(detailsLevelInput) * 100
     let pointratio = getIntermediatePointRatio(lonlats, detailsLevel)
-    console.log(pointratio)
     
     for (i = 0; i< lonlats.length-1; i++ )
     {
@@ -589,23 +575,6 @@ function getIntermediatePointsLonLat(lonlats) {
         }
         points.push(linePoints)
     }
-    // let point1 = lonlats[0]
-    // let point2 = lonlats[1]
-    // let lon1 = point1.lon
-    // let lat1 = point1.lat
-    // let lon2 = point2.lon
-    // let lat2 = point2.lat
-    // let deltaLon = lon2 - lon1
-    // let deltaLat = lat2 - lat1
-    // let lonStep = deltaLon / detailsLevel
-    // let latStep = deltaLat / detailsLevel
-
-    // for (let i = 0; i < detailsLevel; i++) {
-    //     let lon = lon1 + lonStep * i
-    //     let lat = lat1 + latStep * i
-    //     points.push({ lon: lon, lat: lat })
-    // }
-    console.log(points)
     return points
 }
 // handel the file imported by the user input
@@ -621,22 +590,18 @@ function handelImportFile(evt) {
         if (fileExt == "kml" || fileExt == "xml") {
             handelKMLData(data)
         }
-        // console.log(data)
         loading.isLoading = false
     }
     reader.readAsText(file)
-    // console.log(e.target.files[0])
 }
 // if the user input is a kml file then call this function with the extracted file data
 function handelKMLData(data) {
-    // console.log(data);
     let xmlFormat = new OpenLayers.Format.XML({})
     let xml = xmlFormat.read(data)
     let features = xml.getElementsByTagName("LineString")
     if (features.length > 0) {
         handelLineString(features[0])
     }
-    // console.log(features)
 }
 // if the user input is a kml lineString
 function handelLineString(feature) {
@@ -649,11 +614,8 @@ function handelLineString(feature) {
         return [parseFloat(lonLat[0]), parseFloat(lonLat[1])]
     })
 
-    // console.log(vertices)
-
     let linePoints = generatePointGeometry(vertices)
     let lines = genetateLineGeometry(linePoints.points)
-    console.log(linePoints)
     vectorLayer.removeAllFeatures();
     vectorLayer.addFeatures([...linePoints.points, ...lines])
     let lonBreakPoints = linePoints.lonlat.map(l=>l.x)
@@ -697,7 +659,6 @@ function genetateLineGeometry(points) {
         let line = new OpenLayers.Feature.Vector(new OpenLayers.Geometry.LineString([point1, point2]))
         result.push(line)
     }
-    // console.log(result)
     return result
 }
 // get the number of points on each line by calculating the line length
@@ -724,13 +685,11 @@ function getIntermediatePointRatio(lonlats, detailsLevel){
     })
 }
 // request the data on each point 
-function requestPointsData() {
+function requestPointsData(i = 0) {
     if(!getFeatureInfoControl){
-        // console.log("please select a DSM layer")
         return
     }
     if (points.length< 0){
-        // console.log("Unable to find a point.")
         return
     }
     lizMap.map.getControlsByClass('OpenLayers.Control.Navigation')[0].disableZoomWheel()
@@ -740,15 +699,10 @@ function requestPointsData() {
     loading.isLoading = true
     elvData = []
     updateChart()
-    for (i=0;i<points.length; i++){
-        points[i].forEach(async (point) => {
-            var xy = map.getPixelFromLonLat(point)
-            await getFeatureInfoControl.getInfoForClick({ xy: xy })
-        })
-        loading.message = "Loading(" + (i+1) + "/" + points.length +")"
-        loading.max = points[i].length
-        while(loading.isLoading){
-            sleep(1000)
-        }
-    }
+    points[i].forEach(async (point) => {
+        var xy = map.getPixelFromLonLat(point)
+        await getFeatureInfoControl.getInfoForClick({ xy: xy })
+    })
+    loading.message = "Featckhing(" + (i+1) + "/" + points.length +")"
+    loading.max = points[i].length
 }
