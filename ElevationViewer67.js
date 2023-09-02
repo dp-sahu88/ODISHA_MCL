@@ -5,7 +5,10 @@ var getFeatureInfoControl;
 var LineEndPointsLonLat = [];
 var elvData = [];
 var chartReady = false
-var lineBreakPoints = []
+var lineBreakPoints = {
+    lon: []
+    , lat: []
+}
 var myChart;
 var points = [];
 var highlightLayer;
@@ -33,6 +36,7 @@ var loading = new Proxy(loadingObj, {
     }
 })
 
+// lizMap event listner
 lizMap.events.on({
     layersadded: () => {
         addBottomDock()
@@ -84,7 +88,7 @@ lizMap.events.on({
     }
 }
 )
-
+// Add points when map clicked 
 function onMapClick(evt) {
     evt.preventDefault()
     if (loading.isLoading) {
@@ -119,7 +123,7 @@ function onMapClick(evt) {
         highlightLayer.removeAllFeatures();
     }
 }
-
+// remove getFeatureInfoController 
 function clearGetFeatureInfoControl() {
     if (getFeatureInfoControl) {
         getFeatureInfoControl.deactivate();
@@ -127,7 +131,7 @@ function clearGetFeatureInfoControl() {
         getFeatureInfoControl = null
     }
 }
-
+// add getFeatureInfoController 
 function addGetFeatureInfoControl() {
     if (getFeatureInfoControl) {
         clearGetFeatureInfoControl()
@@ -154,7 +158,7 @@ function addGetFeatureInfoControl() {
     getFeatureInfoControl.events.register('getfeatureinfo', getFeatureInfoControl, e => { handelGetInfo(e) })
     map.addControl(getFeatureInfoControl);
 }
-
+// handel the server responce
 function handelGetInfo(e) {
     let jsondata = parseTableToJSON(e.text)
     if (jsondata.length == 0) {
@@ -185,7 +189,7 @@ function handelGetInfo(e) {
     );
     vectorLayer.addFeatures([feature]);
 }
-
+// load the feature info when point are drawn
 function loadFeatureInfo() {
     if (!getFeatureInfoControl) {
         return;
@@ -193,8 +197,7 @@ function loadFeatureInfo() {
     points = getIntermediatePointsLonLat(LineEndPointsLonLat)
     requestPointsData()
 }
-
-
+// returns the layer by name
 function getLayerByname(name) {
     let currentLayers = Object.values(lizMap.map.layers)
     let layer;
@@ -208,7 +211,7 @@ function getLayerByname(name) {
     }
     return false
 }
-
+// get all layers from the lizmap config
 function getAllLayersName() {
     let currentLayers = Object.values(lizMap.config.layers)
     let layersName = []
@@ -217,7 +220,7 @@ function getAllLayersName() {
     });
     return layersName
 }
-
+// convert the html table to json
 function parseTableToJSON(tableString) {
 
     if (tableString == '') {
@@ -258,7 +261,7 @@ function parseTableToJSON(tableString) {
     // Return the JSON data
     return jsonData;
 }
-
+// add the bottom dock template and setup
 function addBottomDock() {
     let layers = getAllLayersName()
     let layerOption = ''
@@ -300,12 +303,12 @@ function addBottomDock() {
             clearGetFeatureInfoControl()
         }
     })
-    $('#elvProfShpFileInput').on('change', (e) => {
+    $('#elvProfShpFileInput').on('input', (e) => {
         e.preventDefault()
         handelImportFile(e)
     })
 }
-
+// add the chart js to the ui
 function addChartjs() {
     let chartScript = document.createElement('script')
     chartScript.src = "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"
@@ -332,7 +335,7 @@ function addChartjs() {
         })
     }
 }
-
+// draw the chart to the canvas
 function drawChart() {
     if (!chartReady) {
         return
@@ -438,8 +441,7 @@ function drawChart() {
         plugins: [plugin],
     });
 }
-
-
+// export the elvdata as CSV
 function exportToExcel() {
     if (elvData.length == 0) {
         return
@@ -459,7 +461,7 @@ function exportToExcel() {
     link.click();
     document.body.removeChild(link);
 }
-
+// Update chart 
 function updateChart() {
     myChart.data.labels = elvData.map(d => {
         let value = d.distance_m;
@@ -471,59 +473,50 @@ function updateChart() {
     loading.isLoading = false
     myChart.resize()
 }
-
-function generateDistance() {
-    let initialPoint = points[0]
-    elvData = elvData.map(value => {
-        let result = getDistance(initialPoint, value)
-        value.distance = result.distance
-        value.distance_m = result.distance_m
-        return value
-    })
-}
+// genetate distance and slope for the elvData
 function generateDistanceAndSlope() {
     if (elvData.length == 0) {
         return
     }
+    let initialDistance = 0
     let initialPoint = points[0]
     let previous = elvData[0]
     elvData = elvData.map(value => {
-        let result = getDistance(initialPoint, value)
+        let result = getDistance(initialPoint, value, initialDistance)
         let slope = getSlope(previous, value)
         previous = value
         value.slope = slope
         value.distance = result.distance
         value.distance_m = result.distance_m
+        initialDistance = result.initialDistance
+        initialPoint = result.initialPoint
         return value
     })
 }
-
-function getDistance(point1, point2) {
-    let lonlat1 = { lon: point1.lon, lat: point1.lat }
+// calculate distance between two points
+function getDistance(point1, point2 , initialDistance) {
+    let lonlat1 = { lon: point1.lon || point1.x, lat: point1.lat || point1.y }
     let lonlat2 = { lon: point2.x, lat: point2.y }
     let point_1 = new OpenLayers.Geometry.Point(lonlat1.lon, lonlat1.lat)
     let point_2 = new OpenLayers.Geometry.Point(lonlat2.lon, lonlat2.lat)
-    var distance = point_1.distanceTo(point_2);
+    var distance = point_1.distanceTo(point_2) + initialDistance;
+    var nextInitialPoint = point1;
+    // console.log(lineBreakPoints.lon, lonlat2.lon)
+    if (lineBreakPoints.lon.includes(lonlat2.lon) && lineBreakPoints.lat.includes(lonlat2.lat)){
+        console.log("matched")
+        initialDistance = distance
+        console.log(initialDistance);
+        nextInitialPoint = point2
+    }
     var formattedDistance = {
         distance: distance < 1000 ? distance.toFixed(2) + " m" : (distance / 1000).toFixed(2) + " km",
-        distance_m: distance
+        distance_m: distance,
+        initialDistance: initialDistance,
+        initialPoint : nextInitialPoint
     };
     return formattedDistance
 }
-
-function generateSlope() {
-    if (elvData.length == 0) {
-        return
-    }
-    let previous = elvData[0]
-    elvData = elvData.map(value => {
-        let slope = getSlope(previous, value)
-        previous = value
-        value.slope = slope
-        return value
-    })
-}
-
+// calculate the slope between two points
 function getSlope(point1, point2) {
     let lonlat1 = { lon: point1.x, lat: point1.y }
     let lonlat2 = { lon: point2.x, lat: point2.y }
@@ -535,10 +528,11 @@ function getSlope(point1, point2) {
     // console.log(elevationDif,distance, slope)
     return slope
 }
-
+// short elvData by distance
 function shortByDistance() {
     elvData = elvData.sort((a, b) => a.distance_m - b.distance_m)
 }
+// highlight points when mouse hover on the chart
 function heighlightPoint(point) {
     highlightLayer.removeAllFeatures();
     let index = point.index
@@ -549,6 +543,7 @@ function heighlightPoint(point) {
         highlightLayer.addFeatures([feature]);
     }
 }
+// export chart canvas as image
 function exportCanvasAsJPG() {
     const canvas = document.getElementById("elvChart");
 
@@ -563,6 +558,7 @@ function exportCanvasAsJPG() {
     // Programmatically click the download link
     downloadLink.click();
 }
+// generate the intermediate points for  the line
 function getIntermediatePointsLonLat(lonlats) {
     if (lonlats.length < 0) {
         return []
@@ -611,7 +607,7 @@ function getIntermediatePointsLonLat(lonlats) {
     console.log(points)
     return points
 }
-
+// handel the file imported by the user input
 function handelImportFile(evt) {
     loading.isLoading = true
     loading.message = "Reading File"
@@ -630,7 +626,7 @@ function handelImportFile(evt) {
     reader.readAsText(file)
     // console.log(e.target.files[0])
 }
-
+// if the user input is a kml file then call this function with the extracted file data
 function handelKMLData(data) {
     // console.log(data);
     let xmlFormat = new OpenLayers.Format.XML({})
@@ -641,7 +637,7 @@ function handelKMLData(data) {
     }
     // console.log(features)
 }
-
+// if the user input is a kml lineString
 function handelLineString(feature) {
     let coordinates = feature.getElementsByTagName("coordinates")
     let vertices = []
@@ -659,10 +655,16 @@ function handelLineString(feature) {
     console.log(linePoints)
     vectorLayer.removeAllFeatures();
     vectorLayer.addFeatures([...linePoints.points, ...lines])
+    let lonBreakPoints = linePoints.lonlat.map(l=>l.x)
+    let latBreakPoints = linePoints.lonlat.map(l=>l.y)
+    lineBreakPoints = {
+        lon: lonBreakPoints,
+        lat: latBreakPoints
+    }
     points = getIntermediatePointsLonLat(linePoints.lonlat)
     requestPointsData()
 }
-
+// generate point geometry for the coordinete 
 function generatePointGeometry(vertices) {
     let result = {
         lonlat: [],
@@ -682,7 +684,7 @@ function generatePointGeometry(vertices) {
     }
     return result
 }
-
+// create line geometry from points
 function genetateLineGeometry(points) {
     if (points.length == 0) {
         return []
@@ -697,7 +699,7 @@ function genetateLineGeometry(points) {
     // console.log(result)
     return result
 }
-
+// get the number of points on each line by calculating the line length
 function getIntermediatePointRatio(lonlats, detailsLevel){
     if (lonlats.length<2){
         return 0
@@ -720,14 +722,14 @@ function getIntermediatePointRatio(lonlats, detailsLevel){
         return numberOfPoints
     })
 }
-
+// request the data on each point 
 function requestPointsData() {
     if(!getFeatureInfoControl){
-        console.log("please select a DSM layer")
+        // console.log("please select a DSM layer")
         return
     }
     if (points.length< 0){
-        console.log("Unable to find a point.")
+        // console.log("Unable to find a point.")
         return
     }
     lizMap.map.getControlsByClass('OpenLayers.Control.Navigation')[0].disableZoomWheel()
@@ -735,6 +737,8 @@ function requestPointsData() {
     loading.value = 0
     loading.message = "Fetching"
     loading.isLoading = true
+    elvData = []
+    updateChart()
     points.forEach(async (point) => {
         var xy = map.getPixelFromLonLat(point)
         await getFeatureInfoControl.getInfoForClick({ xy: xy })
