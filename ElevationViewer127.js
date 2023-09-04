@@ -1,15 +1,12 @@
 let layer; // select the DSM layer
 let map; // Openlayer map instance
 var vectorLayer; // for the user input 
-var fetchedLines =0 ; // number of lines already fetched
+var fetchedLines = 0; // number of lines already fetched
 var getFeatureInfoControl;
 var LineEndPointsLonLat = []; // vertices of the user input line 
 var elvData = []; // fetched elevation data
 var chartReady = false // confirms the graph canvas been ready
-// var lineBreakPoints = {
-//     lon: []
-//     , lat: []
-// }
+var intervals = [0.25, 0.5, 1, 2, 3, 4, 5, 10, 20, 30, 40, 50, 100] // inter vals in meter
 var myChart; // chart js graph ref
 var points = []; // intermediate points
 var highlightLayer; // layer to highlight the point
@@ -180,12 +177,12 @@ function handelGetInfo(e) {
         loading.value = 0
         loading.message = "Rendering"
         lizMap.map.getControlsByClass('OpenLayers.Control.Navigation')[0].enableZoomWheel()
-        elvData[elvData.length-1].break = true
+        elvData[elvData.length - 1].break = true
         generateDistanceAndSlope()
         shortByDistance()
-        updateChart()     
+        updateChart()
         fetchedLines += 1
-        if (fetchedLines < points.length){
+        if (fetchedLines < points.length) {
             requestPointsData(fetchedLines)
         }
     }
@@ -280,7 +277,10 @@ function addBottomDock() {
                         <option value="">Select DSM Layer</option>
                         ${layerOption}
                     </select>
-                    <label for="elvDataDetailsLevel" style="color:#ffffff; display:inline;">Details level:</label>
+                    <select id="intervalType" style="height:1.5rem; margin:0;  display:inline;">
+                        <option value="points">Points</option>
+                        <option value="meters">Meters</option>
+                    </select>
                     <input type="range" min="1" max="13" value="3" step="1" id="elvDataDetailsLevel">
                     <div style="display:inline; margin-left:10px"> 
                         <button type="button" id="exportElvChart" class="btn btn-primary" style="height:1.7rem; margin:0;" >Export </button>
@@ -494,7 +494,8 @@ function generateDistanceAndSlope() {
         value.slope = slope
         value.distance = result.distance
         value.distance_m = result.distance_m
-        if (value.break){
+        value.didtance_m_round = Math.round(result.distance_m)
+        if (value.break) {
             initialDistance = result.distance_m
             initialPoint = value
         }
@@ -503,8 +504,8 @@ function generateDistanceAndSlope() {
 }
 // calculate distance between two points
 function getDistance(point1, point2, initialDistance) {
-    let lonlat1 = { lon: point1.lon || point1.x , lat: point1.lat ||point1.y}
-    let lonlat2 = { lon: point2.x || point2.lon, lat: point2.y || point2.lat}
+    let lonlat1 = { lon: point1.lon || point1.x, lat: point1.lat || point1.y }
+    let lonlat2 = { lon: point2.x || point2.lon, lat: point2.y || point2.lat }
     let point_1 = new OpenLayers.Geometry.Point(lonlat1.lon, lonlat1.lat)
     let point_2 = new OpenLayers.Geometry.Point(lonlat2.lon, lonlat2.lat)
     var distance = point_1.distanceTo(point_2) + initialDistance;
@@ -562,28 +563,60 @@ function getIntermediatePointsLonLat(lonlats) {
     }
     let points = []
     let detailsLevelInput = $('#elvDataDetailsLevel').val()
-    let detailsLevel = parseInt(detailsLevelInput) * 100
-    let pointratio = getIntermediatePointRatio(lonlats, detailsLevel)
-    
-    for (i = 0; i< lonlats.length-1; i++ )
-    {
-        let point1 = lonlats[i]
-        let point2 = lonlats[i+1]
-        let lon1 = point1.lon || point1.x
-        let lat1 = point1.lat || point1.y
-        let lon2 = point2.lon || point2.x
-        let lat2 = point2.lat || point2.y
-        let deltaLon = lon2 - lon1
-        let deltaLat = lat2 - lat1
-        let lonStep = deltaLon / pointratio[i]
-        let latStep = deltaLat / pointratio[i]
-        let linePoints = []
-        for (let j = 0; j < pointratio[i]; j++) {
-            let lon = lon1 + lonStep * j
-            let lat = lat1 + latStep * j
-            linePoints.push({ lon: lon, lat: lat })
+    let detailsLevelInputType = $('#intervalType').val()
+    if (detailsLevelInputType == "points") {
+        let detailsLevel = parseInt(detailsLevelInput) * 100
+        let pointratio = getIntermediatePointRatio(lonlats, detailsLevel)
+
+        for (i = 0; i < lonlats.length - 1; i++) {
+            let point1 = lonlats[i]
+            let point2 = lonlats[i + 1]
+            let lon1 = point1.lon || point1.x
+            let lat1 = point1.lat || point1.y
+            let lon2 = point2.lon || point2.x
+            let lat2 = point2.lat || point2.y
+            let deltaLon = lon2 - lon1
+            let deltaLat = lat2 - lat1
+            let lonStep = deltaLon / pointratio[i]
+            let latStep = deltaLat / pointratio[i]
+            let linePoints = []
+            for (let j = 0; j < pointratio[i]; j++) {
+                let lon = lon1 + lonStep * j
+                let lat = lat1 + latStep * j
+                linePoints.push({ lon: lon, lat: lat })
+            }
+            points.push(linePoints)
         }
-        points.push(linePoints)
+    }else{
+        let level = parseInt(detailsLevelInput)
+        let interval = intervals[level-1]
+        for (i = 0; i < lonlats.length - 1; i++) {
+            let point1 = lonlats[i]
+            let point2 = lonlats[i + 1]
+            let lon1 = point1.lon || point1.x
+            let lat1 = point1.lat || point1.y
+            let lon2 = point2.lon || point2.x
+            let lat2 = point2.lat || point2.y
+            let distance = getDistance(point1, point2, 0)
+            let deltaLon = lon2 - lon1
+            let deltaLat = lat2 - lat1
+            let lonStep = (deltaLon / distance.distance_m)* interval
+            let latStep = (deltaLat / distance.distance_m)* interval
+            let linePoints = []
+            // console.log(lonStep, latStep)
+            for (let j = 0; ; j++) {
+                let lon = lon1 + lonStep * j
+                let lat = lat1 + latStep * j
+                console.log("lon1: "+lon1+"lon: " + lon + "lon2: " +lon2 + "lat1: "+ lat1 + "lat: "+ lat + "lat2: "+ lat2)
+                if (((lat1<=lat && lat< lat2)||(lat1>=lat && lat>lat2))&&((lon1<=lon && lon<lon2)||(lon1>=lon && lon>lon2))){
+                    linePoints.push({ lon: lon, lat: lat })
+                }else{
+                    linePoints.push({ lon: lon2, lat: lat2 })
+                    break
+                }
+            }
+            points.push(linePoints)
+        }
     }
     return points
 }
@@ -610,7 +643,7 @@ function handelImportFile(evt) {
 }
 // if the user input is a kml file then call this function with the extracted file data
 function handelKMLData(data) {
-    if (!layer){
+    if (!layer) {
         return
     }
     let xmlFormat = new OpenLayers.Format.XML({})
@@ -682,17 +715,17 @@ function genetateLineGeometry(points) {
     return result
 }
 // get the number of points on each line by calculating the line length
-function getIntermediatePointRatio(lonlats, detailsLevel){
-    if (lonlats.length<2){
+function getIntermediatePointRatio(lonlats, detailsLevel) {
+    if (lonlats.length < 2) {
         return 0
     }
     let totalDistance = 0
     let lineLengths = []
-    for (let i = 0; i < lonlats.length-1; i++) {
+    for (let i = 0; i < lonlats.length - 1; i++) {
         let lon1 = lonlats[i].x || lonlats[i].lon
         let lat1 = lonlats[i].y || lonlats[i].lat
-        let lon2 = lonlats[i + 1].x || lonlats[i+1].lon
-        let lat2 = lonlats[i + 1].y || lonlats[i+1].lat
+        let lon2 = lonlats[i + 1].x || lonlats[i + 1].lon
+        let lat2 = lonlats[i + 1].y || lonlats[i + 1].lat
         let deltaLon = lon2 - lon1
         let deltaLat = lat2 - lat1
         let lineLength = Math.sqrt(deltaLon * deltaLon + deltaLat * deltaLat)
@@ -700,22 +733,21 @@ function getIntermediatePointRatio(lonlats, detailsLevel){
         totalDistance += lineLength
     }
     return lineLengths.map(l => {
-        let numberOfPoints = Math.round((l/totalDistance) * detailsLevel)
+        let numberOfPoints = Math.round((l / totalDistance) * detailsLevel)
         return numberOfPoints
     })
 }
 // request the data on each point 
 function requestPointsData(i = 0) {
-    if(!getFeatureInfoControl){
+    if (!getFeatureInfoControl) {
         return
     }
-    if (points.length< 0){
+    if (points.length < 0) {
         return
     }
-    console.log(i, points ,points[1])
     lizMap.map.getControlsByClass('OpenLayers.Control.Navigation')[0].disableZoomWheel()
     loading.max = points[i].length
-    loading.message = "Featckhing(" + (i+1) + "/" + points.length +")"
+    loading.message = "Featckhing(" + (i + 1) + "/" + points.length + ")"
     loading.max = points[i].length
     loading.isLoading = true
     points[i].forEach(async (point) => {
