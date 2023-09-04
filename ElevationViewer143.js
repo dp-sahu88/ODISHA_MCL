@@ -10,6 +10,7 @@ var intervals = [0.25, 0.5, 1, 2, 3, 4, 5, 10, 20, 30, 40, 50, 100] // inter val
 var myChart; // chart js graph ref
 var points = []; // intermediate points
 var highlightLayer; // layer to highlight the point
+
 var loadingObj = {  // loading data 
     isLoading: false,
     message: "Loading:",
@@ -277,12 +278,20 @@ function addBottomDock() {
                         <option value="">Select DSM Layer</option>
                         ${layerOption}
                     </select>
-                    <select id="intervalType" style="height:1.5rem; margin:0;  display:inline;">
-                        <option value="points">Points</option>
-                        <option value="meters">Meters</option>
-                    </select>
-                    <input type="range" min="1" max="13" value="3" step="1" id="elvDataDetailsLevel">
-                    <div style="display:inline; margin-left:10px"> 
+                    <div id="elvProfShpInput" style="display:inline; margin-left:5px;">
+                        <label for="elvProfShpFileInput" class="btn btn-primary"><i class="icon-file"></i> Choose file</label>
+                        <input type="file" id="elvProfShpFileInput" accept=".kml" hidden=true/>
+                    </div>
+                    <div style="display:inline-block;">
+                        <select id="intervalType" style="height:1.5rem; width:10ch; margin-left:20px;  margin-bottom:0; display:inline;">
+                            <option value="points">Points</option>
+                            <option value="meters">Meters</option>
+                        </select>
+                        <input type="range" min="1" max="13" value="3" step="1" id="elvDataDetailsLevel">
+                        <div id="elvDisplayInterval" style="display:inline; margin-left:4px; text-color:black; border-radius:15px; height:1.5rem; background-color:white; padding:0 4px 0 4px;"> 300 </div>
+                    </div>
+                    
+                    <div style="display:inline-block; margin-left:15px"> 
                         <button type="button" id="exportElvChart" class="btn btn-primary" style="height:1.7rem; margin:0;" >Export </button>
                         <select id="ExportChartAs" style="height:1.5rem; margin:0;">
                             <option value="csv">As CSV</option>
@@ -292,10 +301,6 @@ function addBottomDock() {
                     <div id="elvChartLoading" style="display:none">
                         <label for="elvChartLoadingBar" style="color:#ffffff; display:inline; margin-left:20px" id="elvChartLoadingMsg">Loading:</label>
                         <meter min="0" max="100" value="50" id="elvChartLoadingBar" style="height:1rem; width:10rem">...</meter>
-                    </div>
-                    <div id="elvProfShpInput" style="display:inline; margin-left:20px;">
-                        <label for="elvProfShpFileInput" class="btn btn-primary"><i class="icon-file"></i> Choose file</label>
-                        <input type="file" id="elvProfShpFileInput" accept=".kml" hidden=true/>
                     </div>
                 </div>
            `;
@@ -313,6 +318,8 @@ function addBottomDock() {
         e.preventDefault()
         handelImportFile(e)
     })
+    $('#elvDataDetailsLevel').on("change",(e)=>{updateDisplayInterval()})
+    $('#intervalType').on("change",(e)=>{updateDisplayInterval()})
 }
 // add the chart js to the ui
 function addChartjs() {
@@ -603,11 +610,9 @@ function getIntermediatePointsLonLat(lonlats) {
             let lonStep = (deltaLon / distance.distance_m)* interval
             let latStep = (deltaLat / distance.distance_m)* interval
             let linePoints = []
-            // console.log(lonStep, latStep)
             for (let j = 0; ; j++) {
                 let lon = lon1 + lonStep * j
                 let lat = lat1 + latStep * j
-                console.log("lon1: "+lon1+"lon: " + lon + "lon2: " +lon2 + "lat1: "+ lat1 + "lat: "+ lat + "lat2: "+ lat2)
                 if (((lat1<=lat && lat< lat2)||(lat1>=lat && lat>lat2))&&((lon1<=lon && lon<lon2)||(lon1>=lon && lon>lon2))){
                     linePoints.push({ lon: lon, lat: lat })
                 }else{
@@ -754,4 +759,17 @@ function requestPointsData(i = 0) {
         var xy = map.getPixelFromLonLat(point)
         await getFeatureInfoControl.getInfoForClick({ xy: xy })
     })
+}
+// update content of the elvDisplayInterval
+function updateDisplayInterval(){
+    let detailsLevelInput = $('#elvDataDetailsLevel').val()
+    detailsLevelInput = parseInt(detailsLevelInput)
+    let detailsLevelInputType = $('#intervalType').val()
+    let displayValue = ''
+    if (detailsLevelInputType == "points"){
+        displayValue = detailsLevelInput*100
+    }else{
+        displayValue = intervals[detailsLevelInput-1] + "m"
+    }
+    $('#elvDisplayInterval').text(displayValue)
 }
