@@ -200,7 +200,7 @@ function loadFeatureInfo() {
         return;
     }
     points = getIntermediatePointsLonLat(LineEndPointsLonLat)
-    console.log(points)
+    fetchedLines = 0
     requestPointsData()
 }
 // returns the layer by name
@@ -592,6 +592,9 @@ function handelImportFile(evt) {
     loading.isLoading = true
     loading.message = "Reading File"
     let file = evt.target.files[0]
+    if (!file) {
+        return
+    }
     let reader = new FileReader()
     let fileName = file.name
     let fileExt = fileName.split('.').pop().toLowerCase()
@@ -599,6 +602,7 @@ function handelImportFile(evt) {
         let data = e.target.result
         if (fileExt == "kml" || fileExt == "xml") {
             handelKMLData(data)
+            $('#elvProfShpFileInput').val(null)
         }
         loading.isLoading = false
     }
@@ -606,6 +610,9 @@ function handelImportFile(evt) {
 }
 // if the user input is a kml file then call this function with the extracted file data
 function handelKMLData(data) {
+    if (!layer){
+        return
+    }
     let xmlFormat = new OpenLayers.Format.XML({})
     let xml = xmlFormat.read(data)
     let features = xml.getElementsByTagName("LineString")
@@ -635,7 +642,9 @@ function handelLineString(feature) {
     //     lat: latBreakPoints
     // }
     points = getIntermediatePointsLonLat(linePoints.lonlat)
-    console.log(points)
+    elvData = []
+    updateChart()
+    fetchedLines = 0
     requestPointsData()
 }
 // generate point geometry for the coordinete 
