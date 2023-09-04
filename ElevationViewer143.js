@@ -752,7 +752,7 @@ function requestPointsData(i = 0) {
     }
     lizMap.map.getControlsByClass('OpenLayers.Control.Navigation')[0].disableZoomWheel()
     loading.max = points[i].length
-    loading.message = "Featckhing(" + (i + 1) + "/" + points.length + ")"
+    loading.message = "Fetching(" + (i + 1) + "/" + points.length + ")"
     loading.max = points[i].length
     loading.isLoading = true
     points[i].forEach(async (point) => {
