@@ -180,6 +180,7 @@ function handelGetInfo(e) {
         loading.value = 0
         loading.message = "Rendering"
         lizMap.map.getControlsByClass('OpenLayers.Control.Navigation')[0].enableZoomWheel()
+        elvData[elvData.length-1].break = true
         generateDistanceAndSlope()
         shortByDistance()
         updateChart()     
@@ -484,24 +485,29 @@ function generateDistanceAndSlope() {
         return
     }
     let initialPoint = elvData[0]
+    let initialDistance = 0;
     let previous = elvData[0]
     elvData = elvData.map(value => {
-        let result = getDistance(initialPoint, value)
+        let result = getDistance(initialPoint, value, initialDistance)
         let slope = getSlope(previous, value)
         previous = value
         value.slope = slope
         value.distance = result.distance
         value.distance_m = result.distance_m
+        if (value.break){
+            initialDistance = result.distance_m
+            initialPoint = value
+        }
         return value
     })
 }
 // calculate distance between two points
-function getDistance(point1, point2) {
+function getDistance(point1, point2, initialDistance) {
     let lonlat1 = { lon: point1.lon || point1.x , lat: point1.lat ||point1.y}
     let lonlat2 = { lon: point2.x || point2.lon, lat: point2.y || point2.lat}
     let point_1 = new OpenLayers.Geometry.Point(lonlat1.lon, lonlat1.lat)
     let point_2 = new OpenLayers.Geometry.Point(lonlat2.lon, lonlat2.lat)
-    var distance = point_1.distanceTo(point_2);
+    var distance = point_1.distanceTo(point_2) + initialDistance;
     var formattedDistance = {
         distance: distance < 1000 ? distance.toFixed(2) + " m" : (distance / 1000).toFixed(2) + " km",
         distance_m: distance,
