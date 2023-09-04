@@ -1,26 +1,26 @@
-let layer;
-let map;
-var vectorLayer;
-var fetchedLines;
+let layer; // select the DSM layer
+let map; // Openlayer map instance
+var vectorLayer; // for the user input 
+var fetchedLines =0 ; // number of lines already fetched
 var getFeatureInfoControl;
-var LineEndPointsLonLat = [];
-var elvData = [];
-var chartReady = false
-var lineBreakPoints = {
-    lon: []
-    , lat: []
-}
-var myChart;
-var points = [];
-var highlightLayer;
-var loadingObj = {
+var LineEndPointsLonLat = []; // vertices of the user input line 
+var elvData = []; // fetched elevation data
+var chartReady = false // confirms the graph canvas been ready
+// var lineBreakPoints = {
+//     lon: []
+//     , lat: []
+// }
+var myChart; // chart js graph ref
+var points = []; // intermediate points
+var highlightLayer; // layer to highlight the point
+var loadingObj = {  // loading data 
     isLoading: false,
     message: "Loading:",
     min: 0,
     max: 100,
     value: 0
 }
-var loading = new Proxy(loadingObj, {
+var loading = new Proxy(loadingObj, { // handel loading
     set: function (target, prop, value) {
         target[prop] = value
         if (!target.isLoading) {
@@ -176,13 +176,17 @@ function handelGetInfo(e) {
     }
 
     loading.value = 1 + loading.value
-    if (loading.max == elvData.length) {
+    if (loading.max == loading.value) {
         loading.value = 0
         loading.message = "Rendering"
         lizMap.map.getControlsByClass('OpenLayers.Control.Navigation')[0].enableZoomWheel()
         generateDistanceAndSlope()
         shortByDistance()
-        updateChart()
+        updateChart()     
+        fetchedLines += 1
+        if (fetchedLines < points.length){
+            requestPointsData(fetchedLines)
+        }
     }
     var feature = new OpenLayers.Feature.Vector(
         new OpenLayers.Geometry.Point(point.lon, point.lat)
@@ -479,7 +483,7 @@ function generateDistanceAndSlope() {
     if (elvData.length == 0) {
         return
     }
-    let initialPoint = points[0]
+    let initialPoint = elvData[0]
     let previous = elvData[0]
     elvData = elvData.map(value => {
         let result = getDistance(initialPoint, value)
@@ -493,8 +497,8 @@ function generateDistanceAndSlope() {
 }
 // calculate distance between two points
 function getDistance(point1, point2) {
-    let lonlat1 = { lon: point1.lon , lat: point1.lat}
-    let lonlat2 = { lon: point2.x, lat: point2.y }
+    let lonlat1 = { lon: point1.lon || point1.x , lat: point1.lat ||point1.y}
+    let lonlat2 = { lon: point2.x || point2.lon, lat: point2.y || point2.lat}
     let point_1 = new OpenLayers.Geometry.Point(lonlat1.lon, lonlat1.lat)
     let point_2 = new OpenLayers.Geometry.Point(lonlat2.lon, lonlat2.lat)
     var distance = point_1.distanceTo(point_2);
@@ -618,13 +622,14 @@ function handelLineString(feature) {
     let lines = genetateLineGeometry(linePoints.points)
     vectorLayer.removeAllFeatures();
     vectorLayer.addFeatures([...linePoints.points, ...lines])
-    let lonBreakPoints = linePoints.lonlat.map(l=>l.x)
-    let latBreakPoints = linePoints.lonlat.map(l=>l.y)
-    lineBreakPoints = {
-        lon: lonBreakPoints,
-        lat: latBreakPoints
-    }
+    // let lonBreakPoints = linePoints.lonlat.map(l=>l.x)
+    // let latBreakPoints = linePoints.lonlat.map(l=>l.y)
+    // lineBreakPoints = {
+    //     lon: lonBreakPoints,
+    //     lat: latBreakPoints
+    // }
     points = getIntermediatePointsLonLat(linePoints.lonlat)
+    console.log(points)
     requestPointsData()
 }
 // generate point geometry for the coordinete 
@@ -692,17 +697,14 @@ function requestPointsData(i = 0) {
     if (points.length< 0){
         return
     }
+    console.log(i, points ,points[1])
     lizMap.map.getControlsByClass('OpenLayers.Control.Navigation')[0].disableZoomWheel()
-    loading.max = points.length
-    loading.value = 0
-    loading.message = "Fetching"
+    loading.max = points[i].length
+    loading.message = "Featckhing(" + (i+1) + "/" + points.length +")"
+    loading.max = points[i].length
     loading.isLoading = true
-    elvData = []
-    updateChart()
     points[i].forEach(async (point) => {
         var xy = map.getPixelFromLonLat(point)
         await getFeatureInfoControl.getInfoForClick({ xy: xy })
     })
-    loading.message = "Featckhing(" + (i+1) + "/" + points.length +")"
-    loading.max = points[i].length
 }
