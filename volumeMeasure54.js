@@ -47,12 +47,13 @@ class VolumeClaculator {
             <option value="">Select DSM Layer</option>
             ${layerOption}
         </select>
-        <div id="toggle-draw-volume-tool" class="icon-pencil" style="background-color:blue; width:20px;"></div>
-        <div id="volume-calculator-dsplay" style="background-color:blue; width:20px; display:block;"></div>
+        <div id="toggle-draw-volume-tool" style="background-color:Aqua; border-radius:5px; padding:5px; display:inline;"><i class="icon-pencil"></i></div>
+        <div id="volume-calculator-dsplay-volume" style="background-color:white; text-color:black; border-radius:5px; display:block; margin-top:3px;"></div>
+        <div id="volume-calculator-dsplay-area" style="background-color:white; text-color:black; border-radius:5px; display:block; margin-top:3px;"></div>
         `
         lizMap.addDock("VolumeCalculator", "Volume", "minidock", template, " icon-stop");
         $('#volume-dsm-layer-selector').on('change', e=>(volumeClaculator.setDsmLayer()))
-        $('#toggle-draw-volume-tool').on('click', e=>(volumeClaculator.toggleDrawPolygon()))
+        $('#toggle-draw-volume-tool').on('click', e=>(volumeClaculator.toggleDrawPolygon())) 
     }
     getAllLayersName() {
         let layerNames = []
@@ -268,6 +269,9 @@ class VolumeClaculator {
         // console.log(area, averageElv)
         let volume = area * averageElv
         console.log(volume)
+        $('#volume-calculator-dsplay-area').html(`Area: ${area} m<sup>2</sup>`)
+        $('#volume-calculator-dsplay-volume').html(`Volume: ${volume} m<sup>3</sup>`)
+        $('#VolumeCalculator .menu-content').attr('style','max-height:fit-content;')
     }
     averageElv() {
         if (this.elvData.length == 0) {
