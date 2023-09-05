@@ -597,6 +597,7 @@ function getIntermediatePointsLonLat(lonlats) {
     }else{
         let level = parseInt(detailsLevelInput)
         let interval = intervals[level-1]
+        let rem_destance = 0
         for (i = 0; i < lonlats.length - 1; i++) {
             let point1 = lonlats[i]
             let point2 = lonlats[i + 1]
@@ -609,16 +610,22 @@ function getIntermediatePointsLonLat(lonlats) {
             let deltaLat = lat2 - lat1
             let lonStep = (deltaLon / distance.distance_m)* interval
             let latStep = (deltaLat / distance.distance_m)* interval
+            lon1 = lon1 + ((deltaLon / distance.distance_m) *(interval-rem_destance))
+            lat1 = lat1 + ((deltaLat / distance.distance_m) *(interval-rem_destance))
+            distance = getDistance({lon: lon1, lat: lat1}, point2, 0)
+            let noOfsteps = Math.floor(distance.distance_m/interval)
+            rem_destance = distance.distance_m%interval
+            console.log(`noOfSteps: ${noOfsteps} | interval: ${interval} | distance: ${distance.distance_m}` + " ")
             let linePoints = []
-            for (let j = 0; ; j++) {
+            for (let j = 0; j<= noOfsteps ; j++) {
                 let lon = lon1 + lonStep * j
                 let lat = lat1 + latStep * j
-                if (((lat1<=lat && lat< lat2)||(lat1>=lat && lat>lat2))&&((lon1<=lon && lon<lon2)||(lon1>=lon && lon>lon2))){
+                // if (((lat1<=lat && lat< lat2)||(lat1>=lat && lat>lat2))&&((lon1<=lon && lon<lon2)||(lon1>=lon && lon>lon2))){
                     linePoints.push({ lon: lon, lat: lat })
-                }else{
-                    linePoints.push({ lon: lon2, lat: lat2 })
-                    break
-                }
+                // }else{
+                //     linePoints.push({ lon: lon2, lat: lat2 })
+                //     break
+                // }
             }
             points.push(linePoints)
         }
