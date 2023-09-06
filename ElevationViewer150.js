@@ -575,7 +575,7 @@ function getIntermediatePointsLonLat(lonlats) {
         let detailsLevel = parseInt(detailsLevelInput) * 100
         let pointratio = getIntermediatePointRatio(lonlats, detailsLevel)
 
-        for (i = 0; i < lonlats.length - 1; i++) {
+        for (let i = 0; i < lonlats.length - 1; i++) {
             let point1 = lonlats[i]
             let point2 = lonlats[i + 1]
             let lon1 = point1.lon || point1.x
@@ -598,7 +598,7 @@ function getIntermediatePointsLonLat(lonlats) {
         let level = parseInt(detailsLevelInput)
         let interval = intervals[level-1]
         let rem_destance = 0
-        for (i = 0; i < lonlats.length - 1; i++) {
+        for (let i = 0; i < lonlats.length - 1; i++) {
             let point1 = lonlats[i]
             let point2 = lonlats[i + 1]
             let lon1 = point1.lon || point1.x
