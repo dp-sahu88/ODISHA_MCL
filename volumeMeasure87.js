@@ -29,7 +29,7 @@ class VolumeClaculator {
                 $('#toggle-draw-volume-tool').css({ display: "inline" })
                 $('#VolumeCalculator .menu-content').attr('style', 'max-height:fit-content;')
             } else {
-                $('#volumeCalcLoading').css({ display: "inline" })
+                $('#volumeCalcLoading').css({ display: "block" })
                 $('#volume-claculator-display').css({ display: "none" })
                 $('#toggle-draw-volume-tool').css({ display: "none" })
                 $('#volumeCalcLoadingMsg').text(target.message)
@@ -60,6 +60,8 @@ class VolumeClaculator {
         <div id="toggle-draw-volume-tool" style="background-color:Aqua; border-radius:5px; padding:5px; display:inline;"><i class="icon-pencil"></i></div>
         <label for="volumeBaseElv">Base Elevation:</label>
         <input type="number" step="0.01" id="volumeBaseElv">
+        <label for="volumeDataDetailsLevel">Accuracy Level:</label>
+        <input type="range" min="3" max="10" value="5" step="1" id="volumeDataDetailsLevel">
         <div id="volume-claculator-display">
             <div id="volume-calculator-dsplay-volume" style="background-color:white; text-color:black; border-radius:5px; display:block; margin-top:3px;"></div>
             <div id="volume-calculator-dsplay-cutvolume" style="background-color:white; text-color:black; border-radius:5px; display:block; margin-top:3px;"></div>
@@ -146,8 +148,11 @@ class VolumeClaculator {
     }
     getInnerPoints(geometry) {
         let bounds = geometry.bounds
-        let hSample = 20
-        let vSample = 20
+        let detailsLevel = $('#volumeDataDetailsLevel').val()*10
+        let hvSampleRatio = volumeClaculator.getIntermediatePointRatio([{x:bounds.left, y:bounds.bottom}, {x:bounds.left, y:bounds.top}, {x:bounds.right, y:bounds.top}],detailsLevel)
+        console.log(hvSampleRatio)
+        let hSample = hvSampleRatio[1]
+        let vSample = hvSampleRatio[0]
         let hDelta = Math.abs(bounds.right - bounds.left)
         let vDelta = Math.abs(bounds.top - bounds.bottom)
         let hStep = hDelta / hSample
@@ -303,7 +308,6 @@ class VolumeClaculator {
         let total = []
         volumeClaculator.elvData.forEach(d => {
             let dif = parseFloat(d.value ) - parseFloat(baseHeight)
-            console.log(dif)
             if (dif > 0) {
                 cut.push(dif)
             }
@@ -312,16 +316,13 @@ class VolumeClaculator {
             }
             total.push(dif)
         })
-        console.log(cut, fill , total)
         let totalAvgElv = total.reduce(function (x,y){return x + y;}, 0)/ total.length
         let cutAvgElv = cut.reduce(function(x,y){return x + y;}, 0)/ total.length
         let fillAvgElv = fill.reduce(function(x,y){return x + y}, 0)/ total.length
-        console.log(cutAvgElv, fillAvgElv,totalAvgElv)
         let area = this.geometry.getArea()
         let cutVolume = area * cutAvgElv
         let fillVolume = area * fillAvgElv
         let totalVolume = area * totalAvgElv
-        console.log(cutVolume, fillVolume, totalVolume)
         $('#volume-calculator-dsplay-area').html(`Area: ${area} m<sup>2</sup>`)
         $('#volume-calculator-dsplay-volume').html(`Volume: ${totalVolume} m<sup>3</sup>`)
         $('#volume-calculator-dsplay-cutvolume').html(`Cut Volume: ${cutVolume} m<sup>3</sup>`)
