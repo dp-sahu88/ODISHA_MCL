@@ -700,8 +700,8 @@ function generatePointGeometry(vertices) {
     }
     var projectProjection = lizMap.config.options?.qgisProjectProjection?.ref || "EPSG:4326"
     for (let i = 0; i < vertices.length; i++) {
-        longitude = vertices[i][0]
-        latitude = vertices[i][1]
+        let longitude = vertices[i][0]
+        let latitude = vertices[i][1]
         var lonLatPoint = new OpenLayers.Geometry.Point(longitude, latitude).transform(
             new OpenLayers.Projection(projectProjection),
             lizMap.map.getProjectionObject()
