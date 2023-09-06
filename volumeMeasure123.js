@@ -22,16 +22,17 @@ class VolumeClaculator {
     }
     loading = new Proxy(loadingObj, { // handel loading
         set: function (target, prop, value) {
+            console.log(target,prop, value)
             target[prop] = value
             if (!target.isLoading) {
                 $('#volumeCalcLoading').css({ display: "none" })
                 $('#volume-claculator-display').css({ display: "block" })
-                $('#toggle-draw-volume-tool').css({ display: "inline" })
+                $('#volume-claculator-inputs').css({ display: "block" })
                 $('#VolumeCalculator .menu-content').attr('style', 'max-height:fit-content;')
             } else {
                 $('#volumeCalcLoading').css({ display: "block" })
                 $('#volume-claculator-display').css({ display: "none" })
-                $('#toggle-draw-volume-tool').css({ display: "none" })
+                $('#volume-claculator-inputs').css({ display: "none" })
                 $('#volumeCalcLoadingMsg').text(target.message)
                 $('#volumeCalcLoadingBar').text((target.value || 0) + "/" + (target.max || 100))
                 $('#volumeCalcLoadingBar').attr({ min: target.min || 0, max: target.max || 100, value: target.value || 0 })
@@ -57,11 +58,17 @@ class VolumeClaculator {
             <option value="">Select DSM Layer</option>
             ${layerOption}
         </select>
-        <div id="toggle-draw-volume-tool" style="background-color:Aqua; border-radius:5px; padding:5px; display:inline;"><i class="icon-pencil"></i></div>
+        <div id="volume-claculator-inputs" style="display:flex; flex-direction:row; margin-top:5px; margin-bottom:5px;">
+            <div id="toggle-draw-volume-tool" style="background-color:#5599ff; border-radius:5px; width:40%; display:inline-block;"><i class="icon-pencil" style="display:block; margin:8px auto;"></i></div>
+            <div id="volCalcShpInput" style="display:inline; margin-left:5px;">
+                <label for="volCalcShpFileInput" class="btn btn-primary"><i class="icon-file"></i> Choose file</label>
+                <input type="file" id="volCalcShpFileInput" accept=".kml" hidden=true/>
+            </div>
+        </div>
         <label for="volumeBaseElv">Base Elevation:</label>
         <input type="number" step="0.01" id="volumeBaseElv">
         <label for="volumeDataDetailsLevel">Accuracy Level:</label>
-        <input type="range" min="3" max="10" value="5" step="1" id="volumeDataDetailsLevel">
+        <input type="range" min="3" max="13" value="5" step="1" id="volumeDataDetailsLevel">
         <div id="volume-claculator-display">
             <div id="volume-calculator-dsplay-volume" style="background-color:white; text-color:black; border-radius:5px; display:block; margin-top:3px;"></div>
             <div id="volume-calculator-dsplay-cutvolume" style="background-color:white; text-color:black; border-radius:5px; display:block; margin-top:3px;"></div>
@@ -76,6 +83,10 @@ class VolumeClaculator {
         lizMap.addDock("VolumeCalculator", "Volume", "minidock", template, " icon-stop");
         $('#volume-dsm-layer-selector').on('change', e => (volumeClaculator.setDsmLayer()))
         $('#toggle-draw-volume-tool').on('click', e => (volumeClaculator.toggleDrawPolygon()))
+        $('#volCalcShpFileInput').on('input', (e) => {
+            e.preventDefault()
+            volumeClaculator.handelImportFile(e)
+        })
     }
     getAllLayersName() {
         let layerNames = []
@@ -130,9 +141,11 @@ class VolumeClaculator {
         if (this.drawControl.active) {
             this.vectoLayer.removeAllFeatures()
             this.drawControl.deactivate();
+            $('#toggle-draw-volume-tool').css("background-color", "#5599ff")
         } else {
             this.vectoLayer.removeAllFeatures()
             this.drawControl.activate();
+            $('#toggle-draw-volume-tool').css("background-color", "#3377dd")
         }
     }
     handelQuery(e) {
@@ -320,6 +333,7 @@ class VolumeClaculator {
         let cutAvgElv = cut.reduce(function(x,y){return x + y;}, 0)/ total.length
         let fillAvgElv = fill.reduce(function(x,y){return x + y}, 0)/ total.length
         let area = this.geometry.getArea()
+        area = Math.abs(area) 
         let cutVolume = area * cutAvgElv
         let fillVolume = area * fillAvgElv
         let totalVolume = area * totalAvgElv
@@ -392,5 +406,69 @@ class VolumeClaculator {
             let numberOfPoints = Math.round((l / totalDistance) * detailsLevel)
             return numberOfPoints
         })
+    }
+    handelImportFile(evt){
+        volumeClaculator.loading.isLoading = true
+        volumeClaculator.loading.message = "Reading File"
+        let file = evt.target.files[0]
+        if (!file) {
+            return
+        }
+        let reader = new FileReader()
+        let fileName = file.name
+        let fileExt = fileName.split('.').pop().toLowerCase()
+        reader.onload = (e) => {
+            volumeClaculator.loading.isLoading = false
+            let data = e.target.result
+            if (fileExt == "kml" || fileExt == "xml") {
+                volumeClaculator.handelKMLData(data)
+                $('#volCalcShpFileInput').val(null)
+            }
+        }
+        reader.readAsText(file)
+    }
+    handelKMLData(data) {
+        if (!volumeClaculator.dsmLayer) {
+            return
+        }
+        let xmlFormat = new OpenLayers.Format.XML({})
+        let xml = xmlFormat.read(data)
+        let features = xml.getElementsByTagName("LinearRing")
+        if (features.length > 0) {
+            volumeClaculator.handelPolygonInput(features[0])
+        }
+    }
+    handelPolygonInput(feature){
+        let coordinates = feature.getElementsByTagName("coordinates")
+        let vertices = []
+    
+        vertices = coordinates[0].childNodes[0].nodeValue.split(' ')
+        vertices = vertices.map(value => {
+            let lonLat = value.split(",")
+            return [parseFloat(lonLat[0]),parseFloat(lonLat[1])]
+        })
+        let pointGeometry = volumeClaculator.generatePointGeometry(vertices)
+        let geometry = new OpenLayers.Geometry.LinearRing(pointGeometry)
+        let polyFeature = new OpenLayers.Feature.Vector(geometry)
+        volumeClaculator.vectoLayer.removeAllFeatures()
+        volumeClaculator.vectoLayer.addFeatures([polyFeature])
+        volumeClaculator.geometry = geometry
+        volumeClaculator.points = volumeClaculator.getInnerPoints(volumeClaculator.geometry)
+        volumeClaculator.elvData = []
+        volumeClaculator.requestData(volumeClaculator.points)
+    }
+    generatePointGeometry(vertices) {
+        let pointFeatures= []
+        var projectProjection = lizMap.config.options?.qgisProjectProjection?.ref || "EPSG:4326"
+        for (let i = 0; i < vertices.length; i++) {
+            let longitude = vertices[i][0]
+            let latitude = vertices[i][1]
+            var lonLatPoint = new OpenLayers.Geometry.Point(longitude, latitude).transform(
+                new OpenLayers.Projection(projectProjection),
+                lizMap.map.getProjectionObject()
+            );
+            pointFeatures.push(lonLatPoint)
+        }
+        return pointFeatures
     }
 }
