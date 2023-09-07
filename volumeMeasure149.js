@@ -47,6 +47,7 @@ class VolumeClaculator {
     constructor(map, vectorLayer) {
         this.map = map
         this.vectoLayer = vectorLayer
+        this.history = []
         map.addLayer(this.vectoLayer)
     }
     addMiniDock() {
@@ -76,6 +77,7 @@ class VolumeClaculator {
             <div id="volume-calculator-dsplay-cutvolume" style="background-color:white; text-color:black; border-radius:5px; display:block; margin-top:3px;"></div>
             <div id="volume-calculator-dsplay-fillvolume" style="background-color:white; text-color:black; border-radius:5px; display:block; margin-top:3px;"></div>
             <div id="volume-calculator-dsplay-area" style="background-color:white; text-color:black; border-radius:5px; display:block; margin-top:3px;"></div>
+            <button type="button" id="exportVolHistory" class="btn btn-primary" style="height:1.7rem; margin:0;" >Export history</button>
         </div>
         <div id="volumeCalcLoading" style="display:none">
             <label for="volumeCalcLoadingBar" style="color:#000000; display:inline; margin-left:5px" id="volumeCalcLoadingMsg">Loading:</label>
@@ -89,6 +91,7 @@ class VolumeClaculator {
             e.preventDefault()
             volumeClaculator.handelImportFile(e)
         })
+        $('#exportVolHistory').on('click', e => (volumeClaculator.exportHistory()))
     }
     getAllLayersName() {
         let layerNames = []
@@ -368,6 +371,14 @@ class VolumeClaculator {
         $('#volume-calculator-dsplay-cutvolume').html(`Cut Volume: ${cutVolume} m<sup>3</sup>`)
         $('#volume-calculator-dsplay-fillvolume').html(`Fill Volume: ${fillVolume} m<sup>3</sup>`)
         $('#VolumeCalculator .menu-content').attr('style', 'max-height:fit-content;')
+        volumeClaculator.history.push({
+            neme:volumeClaculator.geometry.id,
+            cutVolume: cutVolume,
+            fillVolume: fillVolume,
+            totalVolume: totalVolume,
+            area:area,
+        })
+
     }
     averageElv(elvInfo) {
         if (elvInfo.length == 0) {
@@ -496,5 +507,25 @@ class VolumeClaculator {
             pointFeatures.push(lonLatPoint)
         }
         return pointFeatures
+    }
+    exportHistory(){
+        if (volumeClaculator.history.length == 0) {
+            return
+        }
+            // Step 1: Convert array of objects to CSV format
+    let csvContent = 'name,cut volume,fill volume, total volume, area\n'
+    let data = volumeClaculator.history.map(obj => Object.values(obj).join(',')).join('\n');
+    csvContent = csvContent+data
+    // Step 2: Create data URI for CSV content
+    const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent);
+
+    // Step 3: Simulate click event to download Excel file
+    let fileName = 'edall_map_volume' + Date.now() + '.csv'
+    const link = document.createElement('a');
+    link.setAttribute('href', dataUri);
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
     }
 }
