@@ -16,6 +16,8 @@ class VolumeClaculator {
     loadingObj = {  // loading data 
         isLoading: false,
         message: "Loading:",
+        batch:0,
+        batchSize:100,
         min: 0,
         max: 100,
         value: 0
@@ -68,7 +70,7 @@ class VolumeClaculator {
         <label for="volumeBaseElv">Base Elevation:</label>
         <input type="number" step="0.01" id="volumeBaseElv">
         <label for="volumeDataDetailsLevel">Accuracy Level:</label>
-        <input type="range" min="3" max="13" value="5" step="1" id="volumeDataDetailsLevel">
+        <input type="range" min="3" max="15" value="5" step="1" id="volumeDataDetailsLevel">
         <div id="volume-claculator-display">
             <div id="volume-calculator-dsplay-volume" style="background-color:white; text-color:black; border-radius:5px; display:block; margin-top:3px;"></div>
             <div id="volume-calculator-dsplay-cutvolume" style="background-color:white; text-color:black; border-radius:5px; display:block; margin-top:3px;"></div>
@@ -242,26 +244,50 @@ class VolumeClaculator {
             })
             volumeClaculator.loading.value += 1
         }
+        if (volumeClaculator.loading.value%volumeClaculator.loading.batchSize==0){
+            if ((volumeClaculator.loading.batch+1)* volumeClaculator.loading.batchSize< volumeClaculator.loading.max){
+                volumeClaculator.loading.batch += 1
+                volumeClaculator.requestData()
+            }
+        }
         if (volumeClaculator.loading.max == volumeClaculator.loading.value) {
             volumeClaculator.loading.isLoading = false
             volumeClaculator.calculateVolume()
         }
     }
     requestData(query) {
-        volumeClaculator.loading.max = query.length
-        volumeClaculator.loading.value = 0
-        volumeClaculator.loading.isLoading = true
-        if (volumeClaculator.status == "pending") {
-            volumeClaculator.loading.message = "Retriving Base"
-        } else {
-            volumeClaculator.loading.message = "Loading"
+        if (query){
+            volumeClaculator.query = query
+            volumeClaculator.loading.batch=0
+            volumeClaculator.loading.batchSize=100
+            volumeClaculator.loading.max = query.length
+            volumeClaculator.loading.value = 0
+            volumeClaculator.loading.isLoading = true
+            if (volumeClaculator.status == "pending") {
+                volumeClaculator.loading.message = "Retriving Base"
+            } else {
+                volumeClaculator.loading.message = "Loading"
+            }
+        }else{
+            query = volumeClaculator.query
         }
+        let startPoint = volumeClaculator.loading.batch* volumeClaculator.loading.batchSize
+
         this.map.addControl(this.getFeatureInfoControl)
         this.getFeatureInfoControl.activate();
-        query.forEach(async (point) => {
+        // query.forEach(async (point) => {
+        //     var xy = this.map.getPixelFromLonLat(point)
+        //     await this.getFeatureInfoControl.getInfoForClick({ xy: xy })
+        // })
+        for(let i = 0; i< volumeClaculator.loading.batchSize;i++){
+            let index = startPoint+i
+            if (index >= query.length){
+                break
+            }
+            let point = query[index]
             var xy = this.map.getPixelFromLonLat(point)
-            await this.getFeatureInfoControl.getInfoForClick({ xy: xy })
-        })
+            this.getFeatureInfoControl.getInfoForClick({ xy: xy })
+        }
         this.getFeatureInfoControl.deactivate();
         this.map.removeControl(this.getFeatureInfoControl)
     }
@@ -332,7 +358,7 @@ class VolumeClaculator {
         let totalAvgElv = total.reduce(function (x,y){return x + y;}, 0)/ total.length
         let cutAvgElv = cut.reduce(function(x,y){return x + y;}, 0)/ total.length
         let fillAvgElv = fill.reduce(function(x,y){return x + y}, 0)/ total.length
-        let area = this.geometry.getArea()
+        let area = this.geometry.getGeodesicArea(lizMap.map.getProjection())
         area = Math.abs(area) 
         let cutVolume = area * cutAvgElv
         let fillVolume = area * fillAvgElv
