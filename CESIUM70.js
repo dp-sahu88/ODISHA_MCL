@@ -1,16 +1,30 @@
 let lizmapCesium; 
 lizMap.events.on({
     uicreated: function (e) {
-        let template = `<div id="cesiumContainer" style="height:86vh;" ></div>`
-        lizMap.addDock(
-            '3D',
-            '3D',
-            'right-dock',
-            template,
-            'icon-globe'
-        );
+        let view = document.createElement('div')
+        view.innerHTML= `<div id="cesiumContainer" style="height:95vh"></div>`
+        document.getElementById('map').appendChild(view)
         lizmapCesium = new LizmapCesium("cesiumContainer")
         lizmapCesium.setUpCesium()
+        lizmapCesium.addDock()
+    },
+    dockopened: (e)=>{
+        if (e.id!='3D'){
+            return
+        }
+        $('#map .olMapViewport').css({display:"none"})
+        $('#navbar').css({display:"none"})
+        $('#overview-box').css({display:"none"})
+        $('#cesiumContainer').css({display:"block"})
+    },
+    dockclosed: (e)=>{
+        if (e.id!='3D'){
+            return
+        }
+        $('#map .olMapViewport').css({display:"block"})
+        $('#navbar').css({display:"block"})
+        $('#overview-box').css({display:"block"})
+        $('#cesiumContainer').css({display:"none"}) 
     }
 });
 
@@ -65,7 +79,6 @@ class LizmapCesium{
         });
         return layersName
     }
-
     getLayerByname(name) {
         let currentLayers = Object.values(lizMap.map.layers)
         let layer;
@@ -79,4 +92,21 @@ class LizmapCesium{
         }
         return false
     }
+    addDock(){
+        let layers= this.getAllLayersName()
+        let layerOptions = ''
+        layers.forEach(layer=>{
+            layerOptions = layerOptions+`<input type="checkbox" id="view_3d${layer}_checkbox" name="${layer}" value="${layer}">
+            <label for="view_3d${layer}_checkbox" style="display:inline;">${layer}</label><br>`
+        })
+        let template = `<div>${layerOptions}<div>`
+        lizMap.addDock(
+            '3D',
+            '3D',
+            'dock',
+            template,
+            'icon-globe'
+        );
+    }
+
 }
