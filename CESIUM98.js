@@ -52,20 +52,22 @@ class LizmapCesium{
     }
     importWMSLayers(){
         let layersName = this.getAllLayersName().reverse()
+        this.layers = {}
+        this.activeLayers = {}
         layersName.forEach(value => {
             let layer = getLayerByname(value)
             if (layer.params?.SERVICE == 'WMS'){
                 let url = layer.url
                 let name = layer.name
-                this.viewer.imageryLayers.addImageryProvider(new Cesium.WebMapServiceImageryProvider({
+                let wmsLayer = new Cesium.WebMapServiceImageryProvider({
                     url : url,        
                     layers: name,// Here just give layer name
                     parameters: {
                         format:'image/png',
                         transparent:'true'
                     },
-                    name:name
-                }))
+                })
+                this.layers[name] = wmsLayer
             }
         })
     }
@@ -96,7 +98,7 @@ class LizmapCesium{
         let layers= this.getAllLayersName()
         let layerOptions = ''
         layers.forEach(layer=>{
-            layerOptions = layerOptions+`<input type="checkbox" id="view_3d${layer}_checkbox" name="${layer}" value="${layer}">
+            layerOptions = layerOptions+`<input type="checkbox" id="view_3d${layer}_checkbox" name="${layer}" value="${layer}" class="3dlayerswitcher">
             <label for="view_3d${layer}_checkbox" style="display:inline;">${layer}</label><br>`
         })
         let template = `<div>${layerOptions}<div>`
@@ -107,6 +109,26 @@ class LizmapCesium{
             template,
             'icon-globe'
         );
+        $(".3dlayerswitcher").change((e)=>{
+            if(e.target.checked){
+                this.addLayer(e.target.name)
+            }else{
+                this.removeLayer(e.target.name)
+            }
+        })
     }
-
+    async addLayer(name){
+        let layer = this.layers[name]
+        if (layer){
+            let addedLayer = await this.viewer.imageryLayers.addImageryProvider(layer)
+            this.activeLayers[name] = addedLayer
+            this.viewer.flyTo(addedLayer);
+        }
+    }
+    removeLayer(name){
+        let layer = this.activeLayers[name]
+        if (layer){
+            this.viewer.imageryLayers.remove(layer)
+        }
+    }
 }
