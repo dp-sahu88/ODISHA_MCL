@@ -479,11 +479,12 @@ class VolumeClaculator {
         let coordinates = feature.getElementsByTagName("coordinates")
         let vertices = []
     
-        vertices = coordinates[0].childNodes[0].nodeValue.split(' ')
+        vertices = coordinates[0].childNodes[0].nodeValue.split(/(\s)/).filter((x) => x.trim().length>0)
         vertices = vertices.map(value => {
             let lonLat = value.split(",")
             return [parseFloat(lonLat[0]),parseFloat(lonLat[1])]
         })
+        console.log(vertices)
         let pointGeometry = volumeClaculator.generatePointGeometry(vertices)
         let geometry = new OpenLayers.Geometry.LinearRing(pointGeometry)
         let polyFeature = new OpenLayers.Feature.Vector(geometry)
