@@ -34,20 +34,21 @@ class LizmapCesium {
     }
     setUpCesium() {
         let cesiumScript = document.createElement('script')
-        cesiumScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/cesium/1.108.0/Cesium.js'
+        cesiumScript.src = 'http://49.205.217.250/preprod/Cesium109/Build/Cesium/Cesium.js'
         document.body.appendChild(cesiumScript)
         let cesiumCss = document.createElement("link")
-        cesiumCss.href = "https://cesium.com/downloads/cesiumjs/releases/1.109/Build/Cesium/Widgets/widgets.css"
+        cesiumCss.href = "http://49.205.217.250/preprod/Cesium109/Build/Cesium/Widgets/widgets.css"
         cesiumCss.rel = "stylesheet"
         document.head.appendChild(cesiumCss)
         cesiumScript.addEventListener("load", () => {
             let cesiumContainer = document.getElementById('cesiumContainer')
-            this.viewer = new Cesium.Viewer(cesiumContainer, {})
+            this.viewer = new Cesium.Viewer(cesiumContainer)
             this.viewer.animation.container.style.visibility = 'hidden';
             this.viewer.timeline.container.style.visibility = 'hidden';
             document.getElementsByClassName("cesium-credit-textContainer")[0].style.visibility = "hidden"
             this.viewer.forceResize();
             this.importWMSLayers()
+            this.import3DTiles()
         });
     }
     importWMSLayers() {
@@ -131,28 +132,78 @@ class LizmapCesium {
             this.viewer.imageryLayers.remove(layer)
         }
     }
-    flyTo(name){
+    flyTo(name) {
         let target = Object.values(lizMap.config.layers).filter(x => x.name == name)
         if (target.length > 0) {
             let destination
-            if (target[0].crs == "EPSG:4326"){
+            if (target[0].crs == "EPSG:4326") {
                 let extent = target[0].extent
                 let x = (extent[0] + extent[2]) / 2
                 let y = (extent[1] + extent[3]) / 2
                 let z = 3000
-                destination = new Cesium.Cartesian3.fromDegrees(x,y,z)
-            }else{
+                destination = new Cesium.Cartesian3.fromDegrees(x, y, z)
+            } else {
                 let extent = lizMap.config.layers[name].bbox["EPSG:4326"].bbox
-                if(extent.length>0){
+                if (extent.length > 0) {
                     let x = (extent[0] + extent[2]) / 2
                     let y = (extent[1] + extent[3]) / 2
                     let z = 3000
-                    destination = new Cesium.Cartesian3.fromDegrees(x, y,z)
+                    destination = new Cesium.Cartesian3.fromDegrees(x, y, z)
                 }
             }
-            if (destination){
+            if (destination) {
                 this.viewer.camera.flyTo({ destination: destination });
             }
+        }
+    }
+
+    // url:"http://49.205.217.250/preprod/index.php/view/media/getMedia?repository=8746683&project=ToolDev&path=/media/Bridge_391_Final_Tiled_Model_F/tileset.json"
+    async import3DTiles() {
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        const project = urlParams.get('project')
+        let resource = new Cesium.Resource({
+            url: `http://49.205.217.250/preprod/3dData/${project}/tileset.json`,
+            parseUrl: true,
+            isDataUri: false,
+            isBlobUri: false
+        })
+        try {
+            let tileset = await Cesium.Cesium3DTileset.fromUrl(
+                resource, {
+                    // skipLevelOfDetail: false,
+                    baseScreenSpaceError: 1024,
+                    // skipScreenSpaceErrorFactor: .5,
+                    // maximumScreenSpaceError :.5,
+                    // skipLevels: 0,
+                    // immediatelyLoadDesiredLevelOfDetail: true,
+                    // loadSiblings: true,
+                    // cullWithChildrenBounds: true,
+                    // dynamicScreenSpaceError: true,
+                    // dynamicScreenSpaceErrorDensity: 0.00278,
+                    // dynamicScreenSpaceErrorFactor: 4.0,
+                    // dynamicScreenSpaceErrorHeightFalloff: 0.25,
+                    // enableDebugWireframe: true,
+                    // debugShowBoundingVolume: true,
+                    // debugShowContentBoundingVolume: true,
+                    // debugColorizeTiles: true,
+                    // debugShowGeometricError: true,
+                    // debugShowMemoryUsage: true,
+                    // debugShowRenderingStatistics: true,
+                    // debugShowUrl: true,
+                    // debugShowViewerRequestVolume: true,
+                    // debugWireframe: true,
+                });
+            let added = this.viewer.scene.primitives.add(tileset);
+            // added.style = new Cesium.Cesium3DTileStyle({
+            //     color: "color('red')",
+            //     show: "true"
+            // });
+            // this.viewer.extend(Cesium.viewerCesium3DTilesInspectorMixin);
+            added.show = true
+            this.viewer.zoomTo(tileset)
+        } catch (error) {
+            // console.log(error)
         }
     }
 }
