@@ -172,13 +172,13 @@ class LizmapCesium {
             let tileset = await Cesium.Cesium3DTileset.fromUrl(
                 resource, {
                     // skipLevelOfDetail: false,
-                    baseScreenSpaceError: 1024,
+                    maximumScreenSpaceError: 0,
                     // skipScreenSpaceErrorFactor: .5,
                     // maximumScreenSpaceError :.5,
                     // skipLevels: 0,
-                    // immediatelyLoadDesiredLevelOfDetail: true,
-                    // loadSiblings: true,
-                    // cullWithChildrenBounds: true,
+                    immediatelyLoadDesiredLevelOfDetail: true,
+                    loadSiblings: true,
+                    cullWithChildrenBounds: true,
                     // dynamicScreenSpaceError: true,
                     // dynamicScreenSpaceErrorDensity: 0.00278,
                     // dynamicScreenSpaceErrorFactor: 4.0,
