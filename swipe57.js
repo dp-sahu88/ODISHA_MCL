@@ -10,12 +10,12 @@ lizMap.events.on({
             bar.id = "swipe-layer-indicator-bar"
             bar.style.cssText = `
                 position:absolute;
-                height:100%;
-                width:4px;
+                height :${lizmapSwipe.direction=='v'? '4px':'100%'};
+                width:${lizmapSwipe.direction=='v'? '100%':'4px'};
                 background-color:#ff0000;
                 z-index:1001;
-                left:${this.breakPoint};
                 top:0;
+                ${lizmapSwipe.direction=='v'? 'top':'left'}:${lizmapSwipe.breakPoint}%;
             `
             document.getElementById('map').appendChild(bar)
         }
@@ -32,6 +32,7 @@ class LayerSwipe{
     constructor(){
         this.addMiniDock()
         this.breakPoint = 0
+        this.direction = 'h'
     }
     addMiniDock(){
         let layers = this.getAllLayersName()
@@ -75,11 +76,20 @@ class LayerSwipe{
         })
         $('#swipe-layer-break-point').on('input', (e)=>{
             this.breakPoint = e.target.value
-            document.getElementById('swipe-layer-indicator-bar').style['left'] = `${this.breakPoint}%`
+            document.getElementById('swipe-layer-indicator-bar').style[this.direction=='v'? 'top':'left'] = `${this.breakPoint}%`
             this.clip()
         })
         $('#swipe-layer-direction').on('input', (e)=>{
             this.direction = e.target.value
+            document.getElementById('swipe-layer-indicator-bar').style.cssText = `
+            position:absolute;
+            height:${this.direction=='v'? '4px':'100%'};
+            width:${this.direction=='v'? '100%':'4px'};
+            background-color:#ff0000;
+            z-index:1001;
+            top:0;
+            ${this.direction=='v'? 'top':'left'}:${this.breakPoint}%;
+        `
             this.clip()
         })
     }
