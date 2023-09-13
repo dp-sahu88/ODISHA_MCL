@@ -47,23 +47,24 @@ lizMap.events.on({
             vectorLayer = new OpenLayers.Layer.Vector("ElvProfileLine");
             map.addLayer(vectorLayer);
             map.events.register("click", map, onMapClick);
-        }
-        if (highlightLayer == undefined) {
-            var highlightStyle = new OpenLayers.Style({
-                graphicName: "circle",
-                fillColor: "#ff0000",
-                fillOpacity: 0.8,
-                strokeWidth: 2,
-                strokeColor: "#ffffff",
-                strokeOpacity: 1,
-                pointRadius: 6
-            });
-            highlightLayer = new OpenLayers.Layer.Vector('HighlightLayer', {
-                styleMap: new OpenLayers.StyleMap({
-                    "default": highlightStyle
+
+            if (highlightLayer == undefined) {
+                var highlightStyle = new OpenLayers.Style({
+                    graphicName: "circle",
+                    fillColor: "#ff0000",
+                    fillOpacity: 0.8,
+                    strokeWidth: 2,
+                    strokeColor: "#ffffff",
+                    strokeOpacity: 1,
+                    pointRadius: 6
+                });
+                highlightLayer = new OpenLayers.Layer.Vector('HighlightLayer', {
+                    styleMap: new OpenLayers.StyleMap({
+                        "default": highlightStyle
+                    })
                 })
-            })
-            map.addLayer(highlightLayer)
+                map.addLayer(highlightLayer)
+            }
         }
     },
     bottomdockclosed: (e) => {
@@ -318,8 +319,8 @@ function addBottomDock() {
         e.preventDefault()
         handelImportFile(e)
     })
-    $('#elvDataDetailsLevel').on("change",(e)=>{updateDisplayInterval()})
-    $('#intervalType').on("change",(e)=>{updateDisplayInterval()})
+    $('#elvDataDetailsLevel').on("change", (e) => { updateDisplayInterval() })
+    $('#intervalType').on("change", (e) => { updateDisplayInterval() })
 }
 // add the chart js to the ui
 function addChartjs() {
@@ -594,9 +595,9 @@ function getIntermediatePointsLonLat(lonlats) {
             }
             points.push(linePoints)
         }
-    }else{
+    } else {
         let level = parseInt(detailsLevelInput)
-        let interval = intervals[level-1]
+        let interval = intervals[level - 1]
         let rem_destance = 0
         for (let i = 0; i < lonlats.length - 1; i++) {
             let point1 = lonlats[i]
@@ -608,20 +609,20 @@ function getIntermediatePointsLonLat(lonlats) {
             let distance = getDistance(point1, point2, 0)
             let deltaLon = lon2 - lon1
             let deltaLat = lat2 - lat1
-            let lonStep = (deltaLon / distance.distance_m)* interval
-            let latStep = (deltaLat / distance.distance_m)* interval
-            lon1 = lon1 + ((deltaLon / distance.distance_m) *(interval-rem_destance))
-            lat1 = lat1 + ((deltaLat / distance.distance_m) *(interval-rem_destance))
-            distance = getDistance({lon: lon1, lat: lat1}, point2, 0)
-            let noOfsteps = Math.floor(distance.distance_m/interval)
-            rem_destance = distance.distance_m%interval
+            let lonStep = (deltaLon / distance.distance_m) * interval
+            let latStep = (deltaLat / distance.distance_m) * interval
+            lon1 = lon1 + ((deltaLon / distance.distance_m) * (interval - rem_destance))
+            lat1 = lat1 + ((deltaLat / distance.distance_m) * (interval - rem_destance))
+            distance = getDistance({ lon: lon1, lat: lat1 }, point2, 0)
+            let noOfsteps = Math.floor(distance.distance_m / interval)
+            rem_destance = distance.distance_m % interval
             console.log(`noOfSteps: ${noOfsteps} | interval: ${interval} | distance: ${distance.distance_m}` + " ")
             let linePoints = []
-            for (let j = 0; j<= noOfsteps ; j++) {
+            for (let j = 0; j <= noOfsteps; j++) {
                 let lon = lon1 + lonStep * j
                 let lat = lat1 + latStep * j
                 // if (((lat1<=lat && lat< lat2)||(lat1>=lat && lat>lat2))&&((lon1<=lon && lon<lon2)||(lon1>=lon && lon>lon2))){
-                    linePoints.push({ lon: lon, lat: lat })
+                linePoints.push({ lon: lon, lat: lat })
                 // }else{
                 //     linePoints.push({ lon: lon2, lat: lat2 })
                 //     break
@@ -768,15 +769,15 @@ function requestPointsData(i = 0) {
     })
 }
 // update content of the elvDisplayInterval
-function updateDisplayInterval(){
+function updateDisplayInterval() {
     let detailsLevelInput = $('#elvDataDetailsLevel').val()
     detailsLevelInput = parseInt(detailsLevelInput)
     let detailsLevelInputType = $('#intervalType').val()
     let displayValue = ''
-    if (detailsLevelInputType == "points"){
-        displayValue = detailsLevelInput*100
-    }else{
-        displayValue = intervals[detailsLevelInput-1] + "m"
+    if (detailsLevelInputType == "points") {
+        displayValue = detailsLevelInput * 100
+    } else {
+        displayValue = intervals[detailsLevelInput - 1] + "m"
     }
     $('#elvDisplayInterval').text(displayValue)
 }
