@@ -97,7 +97,9 @@ class LayerSwipe{
         let currentLayers = Object.values(lizMap.config.layers)
         let layersName = []
         currentLayers.forEach(l => {
-            layersName.push(l.name)
+            if(l.singleTile == "True" || l.singleTile== "true" || l.singleTile === true){
+                layersName.push(l.name)
+            }
         });
         return layersName
     }
