@@ -8,11 +8,15 @@ lizMap.events.on({
 
 class Anotation {
     constructor() {
-
+        this.vectorLayer = new OpenLayers.Layer.Vector("anotationVectorLayer")
+        lizMap.map.addLayer(this.vectorLayer)
     }
     addDock() {
         let template = `
-        <button type="button" class="btn btn-primary" id="genAnoatationPdf" style="position:absolute; top:5px; left:5px;">generate PDF</button>
+        <div style="position:absolute; top:5px; left:5px;">
+            <button type="button" class="btn btn-primary" id="genAnoatationPdf">generate PDF</button>
+            <input type="month" id="AnotationFilterMonth" style="margin-bottom:0;">
+        </div>
         <div id = "anotation-preview"> </div>
         <button type="button" class="btn btn-primary" id="getAnoatationPdf" style="position:absolute; bottom:5px; left:5px;">Get PDF</button>`
         lizMap.addDock("Anotation", "Anotation", "right-dock", template, "icon-list-alt")
@@ -28,10 +32,10 @@ class Anotation {
 
     }
     genAnotation() {
-        console.log("fetching data")
         let data = this.getData()
         data.then((value) => {
-            this.genDoc(value)
+            let filtered_data = this.applyFilter(value)
+            this.genDoc(filtered_data)
         })
     }
     getAnotation() {
@@ -68,29 +72,27 @@ class Anotation {
         let data = await res.json()
         return data
     }
-    genDoc(data) {
-        if (data.constructor !== ({}).constructor) {
-            return
-        }
-        // let doc = ''
-        this.features = data.features
+    genDoc(f) {
+        this.features = f
         if (this.features.length > 0) {
             $("#anotation-preview").html('')
             this.addDoc(0)
         }
     }
-
-
     async addDoc(index) {
         await new Promise(async (resolve, reject) => {
             let element = this.features[index]
             let type_id = element.id.split(".")
             lizMap.zoomToFeature(type_id[0], type_id[1], "zoom")
+            let pointGeometry = this.generatePointGeometry(element.geometry.coordinates[0])
+            let geometry = new OpenLayers.Geometry.LinearRing(pointGeometry)
+            let polyFeature = new OpenLayers.Feature.Vector(geometry)
+            this.vectorLayer.addFeatures([polyFeature])
             let imageId = type_id.join("_img_")
             let doc = document.createElement('div')
             document.getElementById('anotation-preview').appendChild(doc);
             let desc = element.properties.desc
-            doc.innerHTML  = `
+            doc.innerHTML = `
             <h1>${element.properties.title}</h1>
             <div id=${imageId}></div>
             <p>  <p>
@@ -99,17 +101,16 @@ class Anotation {
             typeWriter()
             function typeWriter() {
                 if (i < desc.length) {
-                  doc.getElementsByTagName("p")[0].innerHTML += desc.charAt(i);
-                  i++;
-                  setTimeout(typeWriter, 10);
+                    doc.getElementsByTagName("p")[0].innerHTML += desc.charAt(i);
+                    i++;
+                    setTimeout(typeWriter, 10);
                 }
             }
 
-            await new Promise(r => setTimeout(r, 1000)); 
+            await new Promise(r => setTimeout(r, 1000));
             html2canvas(document.getElementById("map"), {
                 allowTaint: true
             }).then((canvas) => {
-                console.log("canvas ready...")
                 var data = canvas.toDataURL('image/png');
                 //display 64bit imag
                 var image = new Image();
@@ -119,10 +120,47 @@ class Anotation {
             })
 
         }).then(value => {
+            this.vectorLayer.removeAllFeatures()
             if (value < this.features.length) {
                 this.addDoc(value)
             }
         })
+    }
+    generatePointGeometry(vertices) {
+        let pointFeatures = []
+        var projectProjection = lizMap.config.layers.Anotation.featureCrs || "EPSG:4326"
+        for (let i = 0; i < vertices.length; i++) {
+            let longitude = vertices[i][0]
+            let latitude = vertices[i][1]
+            var lonLatPoint = new OpenLayers.Geometry.Point(longitude, latitude).transform(
+                new OpenLayers.Projection(projectProjection),
+                lizMap.map.getProjectionObject()
+            );
+            pointFeatures.push(lonLatPoint)
+        }
+        return pointFeatures
+    }
+
+    applyFilter(data){  
+        if (data.constructor !== ({}).constructor) {
+            return
+        }
+        let query = $('#AnotationFilterMonth').val()
+        if (!query){
+            return  data.features
+        }
+
+        // let doc = ''
+        query = new Date(query);
+        let filtered_data = [] 
+        data.features.forEach(element => {
+            let eleCreatedOn = new Date(element.properties.created_on)
+            console.log(eleCreatedOn);
+            if (query.getFullYear() == eleCreatedOn.getFullYear()&& query.getMonth() == eleCreatedOn.getMonth()){
+                filtered_data.push(element)
+            }
+        });
+        return filtered_data
     }
 
 }
