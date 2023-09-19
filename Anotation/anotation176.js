@@ -10,6 +10,7 @@ class Anotation {
     constructor() {
         this.vectorLayer = new OpenLayers.Layer.Vector("anotationVectorLayer")
         lizMap.map.addLayer(this.vectorLayer)
+        this.loading = false
     }
     addDock() {
         let template = `
@@ -76,6 +77,7 @@ class Anotation {
         this.features = f
         if (this.features.length > 0) {
             $("#anotation-preview").html('')
+            this.loading = true
             this.addDoc(0)
         }
     }
@@ -116,6 +118,7 @@ class Anotation {
                 var image = new Image();
                 image.src = data;
                 document.getElementById(imageId).appendChild(image)
+                document.getElementById(imageId).addEventListener("click", (e)=>{this.reteckImg(imageId, type_id, element)})
                 resolve(index + 1)
             })
 
@@ -123,6 +126,8 @@ class Anotation {
             this.vectorLayer.removeAllFeatures()
             if (value < this.features.length) {
                 this.addDoc(value)
+            }else{
+                this.loading = false
             }
         })
     }
@@ -161,6 +166,26 @@ class Anotation {
             }
         });
         return filtered_data
+    }
+    async reteckImg(imageId, type_id , element){
+        let pointGeometry = this.generatePointGeometry(element.geometry.coordinates[0])
+        let geometry = new OpenLayers.Geometry.LinearRing(pointGeometry)
+        let polyFeature = new OpenLayers.Feature.Vector(geometry)
+        this.vectorLayer.addFeatures([polyFeature])
+        lizMap.zoomToFeature(type_id[0], type_id[1], "zoom")
+        await new Promise(r => setTimeout(r, 2000));
+        html2canvas(document.getElementById("map"), {
+            allowTaint: true
+        }).then((canvas) => {
+            var data = canvas.toDataURL('image/png');
+            //display 64bit imag
+            var image = new Image();
+            image.src = data;
+            document.getElementById(imageId).innerHTML = ""
+            document.getElementById(imageId).appendChild(image)
+            this.vectorLayer.removeAllFeatures()
+        })
+
     }
 
 }
