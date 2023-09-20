@@ -92,6 +92,9 @@ class Anotation {
             this.vectorLayer.addFeatures([polyFeature])
             let imageId = type_id.join("_img_")
             let doc = document.createElement('div')
+            doc.styleText = `
+                margin-bottom:25px;
+            `
             document.getElementById('anotation-preview').appendChild(doc);
             let desc = element.properties.desc
             doc.innerHTML = `
@@ -168,6 +171,9 @@ class Anotation {
         return filtered_data
     }
     async reteckImg(imageId, type_id , element){
+        if (this.loading){
+            return
+        }
         let pointGeometry = this.generatePointGeometry(element.geometry.coordinates[0])
         let geometry = new OpenLayers.Geometry.LinearRing(pointGeometry)
         let polyFeature = new OpenLayers.Feature.Vector(geometry)
