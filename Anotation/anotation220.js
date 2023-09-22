@@ -42,13 +42,33 @@ class Anotation {
     getAnotation() {
         let printDoc = document.createElement("div")
         printDoc.innerHTML = document.getElementById("anotation-preview").innerHTML
-        let printWindow = window.open('', '', 'height=400,width=900')
-        printWindow.document.write(printDoc.innerHTML)
-        printWindow.document.close();
-        printWindow.addEventListener("afterprint", (event) => {
-            printWindow.close()
-        });
-        printWindow.print();
+        // let printWindow = window.open('', '', 'height=400,width=900')
+        // printWindow.document.write(printDoc.innerHTML)
+        // printWindow.document.close();
+        // printWindow.addEventListener("afterprint", (event) => {
+        //     printWindow.close()
+        // });
+        // printWindow.print();
+        // if (!window.jsPDF){
+        //     window.jsPDF = window.jspdf.jsPDF
+        // }
+        // var doc = new jsPDF();
+        // doc.html(printDoc, {
+        //     callback: function(doc) {
+        //         // Save the PDF
+        //         doc.save(`document${Date.now()}.pdf`);
+        //     },
+        // });
+        const page = printDoc
+        var opt = {
+            margin: 1,
+            filename: `document${Date.now()}.pdf`,
+            html2canvas: { scale: 2 },
+            pagebreak: { mode: 'avoid-all', after: 'br' },
+            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+        };
+        // Choose the element that our invoice is rendered in.
+        html2pdf().set(opt).from(page).toPdf().save();
     }
     async getData() {
         let repository = lizUrls.params.repository
@@ -77,6 +97,8 @@ class Anotation {
         this.features = f
         if (this.features.length > 0) {
             $("#anotation-preview").html('')
+            let frontpage = this.getFronntPage()
+            $("#anotation-preview").prepend(frontpage)
             this.loading = true
             this.addDoc(0)
         }
@@ -98,9 +120,9 @@ class Anotation {
             document.getElementById('anotation-preview').appendChild(doc);
             let desc = element.properties.desc
             doc.innerHTML = `
-            <h1>${element.properties.title}</h1>
+            <h2>${element.properties.title}</h2>
             <div id=${imageId}></div>
-            <p>  <p>
+            <p style="margin-top:10px;">  <p>
             `
             let i = 0
             typeWriter()
@@ -120,16 +142,19 @@ class Anotation {
                 //display 64bit imag
                 var image = new Image();
                 image.src = data;
+                image.height="250px"
                 document.getElementById(imageId).appendChild(image)
-                document.getElementById(imageId).addEventListener("click", (e)=>{this.reteckImg(imageId, type_id, element)})
+                document.getElementById(imageId).addEventListener("click", (e) => { this.reteckImg(imageId, type_id, element) })
                 resolve(index + 1)
             })
 
         }).then(value => {
             this.vectorLayer.removeAllFeatures()
             if (value < this.features.length) {
+                let br = document.getElementById('br')
+                $("#anotation-preview").append(br)
                 this.addDoc(value)
-            }else{
+            } else {
                 this.loading = false
             }
         })
@@ -148,30 +173,29 @@ class Anotation {
         }
         return pointFeatures
     }
-
-    applyFilter(data){  
+    applyFilter(data) {
         if (data.constructor !== ({}).constructor) {
             return
         }
         let query = $('#AnotationFilterMonth').val()
-        if (!query){
-            return  data.features
+        if (!query) {
+            return data.features
         }
 
         // let doc = ''
         query = new Date(query);
-        let filtered_data = [] 
+        let filtered_data = []
         data.features.forEach(element => {
             let eleCreatedOn = new Date(element.properties.created_on)
             console.log(eleCreatedOn);
-            if (query.getFullYear() == eleCreatedOn.getFullYear()&& query.getMonth() == eleCreatedOn.getMonth()){
+            if (query.getFullYear() == eleCreatedOn.getFullYear() && query.getMonth() == eleCreatedOn.getMonth()) {
                 filtered_data.push(element)
             }
         });
         return filtered_data
     }
-    async reteckImg(imageId, type_id , element){
-        if (this.loading){
+    async reteckImg(imageId, type_id, element) {
+        if (this.loading) {
             return
         }
         let pointGeometry = this.generatePointGeometry(element.geometry.coordinates[0])
@@ -193,5 +217,36 @@ class Anotation {
         })
 
     }
-
+    getFronntPage() {
+        let fPage = document.createElement("div")
+        let user_id = document.getElementById("info-user-login").innerText
+        let user_name = document.getElementById("info-user-firstname").innerText
+        let user_lastname = document.getElementById("info-user-lastname").innerText
+        let projectname = lizUrls.params.project
+        let today = new Date().toLocaleDateString()
+        let time = new Date().toLocaleTimeString()
+        fPage.innerHTML = `
+            <h1 style="margin-top:50px; margin-bottom:100px; color:#02b0fa; font-weight:bold;">Inspection Report</h1>
+            <div><span style="font-weight:bold;">Created By: </span>
+            <div style="margin-left:2.5rem; ">
+            <div> <span style="font-weight:bold;"> User id : </span> ${user_id} </div>  
+            <div><span style="font-weight:bold;"> First Name :  </span>${user_name} </div>  
+            <div><span style="font-weight:bold;"> Last Name :  </span>${user_lastname} </div>  
+            </div>
+            </div>
+            <div> <span style="font-weight:bold;">Project : </span>
+            <div style="margin-left:2.5rem; ">
+            <div><span style="font-weight:bold;"> Name : </span> ${projectname} </div>  
+            </div>
+            </div>
+            <div><span style="font-weight:bold;">Created on : </span>
+            <div style="margin-left:2.5rem; ">
+            <div> <span style="font-weight:bold;">Date :  </span>${today} </div>  
+            <div><span style="font-weight:bold;"> Time :  </span>${time} </div>  
+            </div>
+            </div>
+            <br>
+        `
+        return fPage
+    }
 }
