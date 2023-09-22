@@ -1,0 +1,211 @@
+let lizmapGeoVideo
+lizMap.events.on({
+    layersadded: function (e) {
+        let url = "http://49.205.217.250/preprod/video/JAROLI_PORJANPUR_Final_1080P.mp4"
+        let layer_name = "Video_geotag"
+        lizmapGeoVideo = new LizmapVideo(url, layer_name)
+        lizmapGeoVideo.addDock()
+        lizmapGeoVideo.addControl()
+        lizmapGeoVideo.deactivateClickControl()
+    },
+    minidockopened: function (e) {
+        if (e.id == 'GeoVideo') {
+            lizmapGeoVideo.activateClickControl()
+        }
+    },
+    minidockclosed: function (e) {
+        if (e.id == 'GeoVideo') {
+            lizmapGeoVideo.deactivateClickControl()
+            document.getElementById("GeoTagedVid").pause();
+        }
+    },
+})
+
+class LizmapVideo {
+    constructor(u, lm) {
+        this.url = u
+        this.layer_name = lm
+        this.layer = this.getLayerByname(this.layer_name)
+        this.template = `<div id='GeoVideoTag'>
+            <video id="GeoTagedVid" style="width:100%;" controls preload="metadata">
+                <source src=${this.url} type="video/mp4">
+            </video>
+        </div>`
+        this.getAllFeatures()
+        this.createVectorLayer()
+    }
+    addDock() {
+        lizMap.addDock(
+            'GeoVideo',
+            'GeoVideo',
+            'minidock',
+            this.template,
+            'icon-film'
+        );
+        $(`<style>
+            video::-webkit-media-controls-timeline {
+                background-color: #00affa;
+                padding-bottom: 0;
+                margin-bottom: 20px;
+            }
+            video::-webkit-media-controls-time-remaining-display {
+                color: #00affa;
+            }
+            video::-webkit-media-controls-panel{background-image:none !important}    
+        </style>`).appendTo('#GeoVideoTag');
+    }
+    addControl() {
+        this.getFeatureInfoControl = new OpenLayers.Control.WMSGetFeatureInfo({
+            hover: false,
+            title: 'Identify features by clicking',
+            layers: [this.layer],
+            queryVisible: true,
+            maxFeatures: 100,
+            infoFormat: 'text/html',
+            output: "string",
+            vendorParams: {
+                radius: 5
+            },
+            handlerOptions: {
+                click: { delay: 0 },
+                hover: { delay: 0 }
+            }
+        });
+        this.getFeatureInfoControl.events.register('getfeatureinfo', this.getFeatureInfoControl, e => { this.handelGetInfo(e) })
+        lizMap.map.addControl(this.getFeatureInfoControl);
+        this.getFeatureInfoControl.activate()
+    }
+    getLayerByname(name) {
+        let currentLayers = Object.values(lizMap.map.layers)
+        let layer;
+        currentLayers.forEach(l => {
+            if (l.name == name) {
+                layer = l
+            }
+        });
+        if (layer) {
+            return layer
+        }
+        return false
+    }
+    handelGetInfo(e) {
+        if (e.text == "" || !e.text) {
+            return
+        }
+        let jsondata = this.parseTableToJSON(e.text)
+        if (jsondata.length == 0) {
+            return
+        }
+        let time = this.retriveTime(jsondata)
+        let sec = parseInt(time) || null
+        if (sec === null) {
+            return
+        }
+        document.getElementById("GeoTagedVid").currentTime = sec;
+        // document.getElementById("GeoTagedVid").play();
+    }
+    parseTableToJSON(tableString) {
+        if (tableString == '') {
+            return []
+        }
+        var tempContainer = document.createElement('div');
+        tempContainer.innerHTML = tableString;
+        var tableElement = tempContainer.querySelector('table');
+        var rows = tableElement.rows;
+        var jsonData = [];
+        for (var i = 1; i < rows.length; i++) {
+            var row = rows[i];
+            var rowData = {};
+            for (var j = 0; j < row.cells.length; j++) {
+                var cell = row.cells[j];
+                rowData[tableElement.rows[0].cells[j].textContent.trim()] = cell.textContent.trim();
+            }
+            jsonData.push(rowData);
+        }
+        return jsonData;
+    }
+    deactivateClickControl() {
+        this.getFeatureInfoControl.deactivate()
+    }
+    activateClickControl() {
+        this.getFeatureInfoControl.activate()
+    }
+    retriveTime(data) {
+        let time = ''
+        if (data.length == 0) {
+            return
+        }
+        data.forEach(ele => {
+            if ((ele.Field || ele.field).toLowerCase() == "sec") {
+                time = ele.value || ele.Value
+            }
+        })
+        return time
+    }
+    getAllFeatures() {
+        let data;
+        let response = fetch(this.layer.url, {
+            "headers": {
+                "accept": "application/json, text/javascript, */*; q=0.01",
+                "accept-language": "en-US,en;q=0.9",
+                "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+                "x-requested-with": "XMLHttpRequest"
+            },
+            "referrer": this.layer.url,
+            "referrerPolicy": "strict-origin-when-cross-origin",
+            "body": `SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME=${this.layer_name}&OUTPUTFORMAT=GeoJSON&GEOMETRYNAME=extent`,
+            "method": "POST",
+            "mode": "cors",
+            "credentials": "include"
+        });
+        response.then(async value => {
+            data = await value.json()
+        }).finally(() => {
+            let timeData = {}
+            data.features.forEach(value => {
+                timeData[value.properties.Sec] = value.properties
+            })
+            this.timestampData = timeData
+            document.getElementById("GeoTagedVid").ontimeupdate = (e)=>{
+                this.updateLocation(e)
+            }
+        })
+    }
+    updateLocation(e){
+        let time = e.target.currentTime
+        if (time){
+            time = Math.round(time)
+        }
+        this.heighlightPoint(this.timestampData[time])
+    }
+    createVectorLayer(){
+        var highlightStyle = new OpenLayers.Style({
+            graphicName: "circle",
+            fillColor: "#00f0ff",
+            fillOpacity: 0.8,
+            strokeWidth: 2,
+            strokeColor: "#ffffff",
+            strokeOpacity: 1,
+            pointRadius: 6
+        });
+        this.highlightLayer = new OpenLayers.Layer.Vector('geoVideoHighlightLayer', {
+            styleMap: new OpenLayers.StyleMap({
+                "default": highlightStyle
+            })
+        })
+        lizMap.map.addLayer(this.highlightLayer)
+    }
+    heighlightPoint(point) {
+        this.highlightLayer.removeAllFeatures();
+        var projectProjection = lizMap.config.layers.Video_geotag.crs || lizMap.config.layers.Video_geotag.featureCrs || "EPSG:4326"
+        if (point) {
+            var feature = new OpenLayers.Feature.Vector(
+                new OpenLayers.Geometry.Point(point.x|| point.X, point.y || point.Y).transform(
+                    new OpenLayers.Projection(projectProjection),
+                    lizMap.map.getProjectionObject()
+                )
+            );
+            this.highlightLayer.addFeatures([feature]);
+        }
+    }
+}
