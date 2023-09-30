@@ -1,8 +1,8 @@
 let lizmapGeoVideo
 lizMap.events.on({
     layersadded: function (e) {
-        let url = "http://49.205.217.250/preprod/video/JAROLI_PORJANPUR_Final_1080P.mp4"
-        let layer_name = "Video_geotag"
+        let url = "http://49.205.217.250/preprod/video/Jamshedpur_Videographt_1080_10KM.mp4"
+        let layer_name = "Video_Geotag"
         lizmapGeoVideo = new LizmapVideo(url, layer_name)
         lizmapGeoVideo.addDock()
         lizmapGeoVideo.addControl()
@@ -197,7 +197,8 @@ class LizmapVideo {
     }
     heighlightPoint(point) {
         this.highlightLayer.removeAllFeatures();
-        var projectProjection = lizMap.config.layers.Video_geotag.crs || lizMap.config.layers.Video_geotag.featureCrs || "EPSG:4326"
+        let lm = this.layer_name
+        var projectProjection = lizMap.config.layers[lm].crs || lizMap.config.layers[lm].featureCrs || "EPSG:4326"
         if (point) {
             var feature = new OpenLayers.Feature.Vector(
                 new OpenLayers.Geometry.Point(point.x|| point.X, point.y || point.Y).transform(
