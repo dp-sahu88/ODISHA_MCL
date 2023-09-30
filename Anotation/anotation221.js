@@ -1,13 +1,15 @@
 let lizmapAnotation
 lizMap.events.on({
     layersadded: () => {
-        lizmapAnotation = new Anotation()
+        let anotationLayer = 'Anotation'
+        lizmapAnotation = new Anotation(anotationLayer)
         lizmapAnotation.addDock()
     }
 })
 
 class Anotation {
-    constructor() {
+    constructor(al) {
+        this.anotationLayer = al
         this.vectorLayer = new OpenLayers.Layer.Vector("anotationVectorLayer")
         lizMap.map.addLayer(this.vectorLayer)
         this.loading = false
@@ -75,6 +77,7 @@ class Anotation {
         let project = lizUrls.params.project
         let wms = lizUrls.wms
         let url = `${wms}?repository=${repository}&project=${project}`
+        let al = this.anotationLayer
 
         let res = await fetch(url, {
             "headers": {
@@ -85,7 +88,7 @@ class Anotation {
             },
             "referrer": url,
             "referrerPolicy": "strict-origin-when-cross-origin",
-            "body": "SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME=Anotation&OUTPUTFORMAT=GeoJSON&GEOMETRYNAME=extent",
+            "body": `SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME=${al}&OUTPUTFORMAT=GeoJSON&GEOMETRYNAME=extent`,
             "method": "POST",
             "mode": "cors",
             "credentials": "include"
@@ -161,7 +164,8 @@ class Anotation {
     }
     generatePointGeometry(vertices) {
         let pointFeatures = []
-        var projectProjection = lizMap.config.layers.Anotation.featureCrs || "EPSG:4326"
+        let al = this.anotationLayer
+        var projectProjection = lizMap.config.layers[al].featureCrs || "EPSG:4326"
         for (let i = 0; i < vertices.length; i++) {
             let longitude = vertices[i][0]
             let latitude = vertices[i][1]
