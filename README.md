@@ -3,7 +3,8 @@
 ## Tools
   - [Measure tool](#measure-tool)
   - [Swipe tool](#swipe-tool) 
-  - [Volume tool](#volume-measurement-tool) 
+  - [Volume tool](#volume-measurement-tool)
+  - [Goto tool](#goto-tool)
 ## Measure tool
   ### Prerequisites
   - Before adding [Measurement Tool](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/Measurement_Tool.js) to your project, activate the `Measure` tool in `Qgis Lizmap plugin`.
