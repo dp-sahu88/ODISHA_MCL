@@ -3,7 +3,8 @@
 ## Tools
   - [Measure tool](#measure-tool)
   - [Swipe tool](#swipe-tool) 
-  - [Volume tool](#volume-measurement-tool) 
+  - [Volume tool](#volume-measurement-tool)
+  - [Goto tool](#goto-tool)
 ## Measure tool
   ### Prerequisites
   - Before adding [Measurement Tool](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/Measurement_Tool.js) to your project, activate the `Measure` tool in `Qgis Lizmap plugin`.
@@ -89,7 +90,28 @@
 
   Export results in `.csv`  file.
   
+## Goto tool
+  ### Prerequisites
+  Add [Goto_tool.js](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/Goto_tool.js) file in `media/js` folder.
 
+  ### Uses
   
-  
-  
+  ![Find Goto icon](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/Images/goto/goto_icon.png)
+
+  Click on the goto icon to `open/close` the goto dock.
+
+  ![Select Uint](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/Images/goto/select_unit.png)
+
+  Select the unit from the dropdown.
+
+  ![Enter co-ordinate](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/Images/goto/enter_coordinate.png)
+
+  Please input the exact coordinates of the point you wish to add.
+
+  ![add point](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/Images/goto/add_point.png)
+
+  Add Point to the map.
+
+  ![](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/Images/goto/export_points.png)
+
+  Export points as a `.kml` file.
