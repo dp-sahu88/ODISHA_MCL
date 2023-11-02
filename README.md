@@ -5,11 +5,12 @@
   - [Swipe tool](#swipe-tool) 
   - [Volume tool](#volume-measurement-tool)
   - [Goto tool](#goto-tool)
+  - [Elevation tool](#elevation-tool)
 ## Measure tool
   ### Prerequisites
   - Before adding [Measurement Tool](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/Measurement_Tool.js) to your project, activate the `Measure` tool in `Qgis Lizmap plugin`.
   - then add [Measurement Tool](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/Measurement_Tool.js) file to the `media/js` folder.
-  ### Uses
+  ### Use
   ![Find the Measure tool](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/Images/Measurement%20Tool/Measuretoolicon.JPG)
 
   You can find the Measure tool icon in the toolbar, click that icon to open the Measure tool dock.
@@ -40,7 +41,7 @@
   ### Prerequisites
   Add the [Swipe tool](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/Swipe.js) file to the `media/js` folder in your project directory.
 
-  ### Uses
+  ### Use
   ![Find the Swipe tool icon in the tool bar](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/Images/Swipe%20Tool/SwipeIcon.jpg)
 
   You can locate the Swipe tool icon in the left toolbar of the page, you can click that icon to activate the Swipe tool.
@@ -59,8 +60,8 @@
 ## Volume measurement tool
   ### Prerequisites
   There must be at least one Popup-enabled DSM or DTM layer. You can enable `popup` for a layer in `Qgis Lizmap plugin`.
-  Add the [VolumeMeasure.js](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/VolumeMeasure.js) file in the `media/js`folder.
-  ### Uses
+  Add the [VolumeMeasure.js](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/VolumeMeasure.js) file in the `media/js` folder.
+  ### Use
   ![Locate volume tool icon](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/Images/Volume%20tool/volumeToolIcon.png)
 
   Locate the Volume tool icon and click to `open/close` the Volume measurement dock.
@@ -94,7 +95,7 @@
   ### Prerequisites
   Add [Goto_tool.js](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/Goto_tool.js) file in `media/js` folder.
 
-  ### Uses
+  ### Use
   
   ![Find Goto icon](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/Images/goto/goto_icon.png)
 
@@ -115,3 +116,35 @@
   ![](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/Images/goto/export_points.png)
 
   Export points as a `.kml` file.
+  
+## Elevation tool
+  ### Prerequisites
+  There must be at least one Popup-enabled DSM or DTM layer. You can enable `popup` for a layer in `Qgis Lizmap plugin`.
+  Add the [ElevationViewerTool.js](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/ElevationViewerTool.js) file in the `media/js` folder.
+
+  ### Use
+  ![Find the elevation icon](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/Images/Elevation%20tool/icon.png)
+
+  Locate the `Elevation` tool icon and click on that to `open/close` the elevation tool dock.
+
+  ![Accuracy control](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/Images/Elevation%20tool/Accuracy.png)
+
+  You can adjust the accuracy by inputting the number of points or distance between them.
+
+  ![Input line(s)](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/Images/Elevation%20tool/input.png)
+  Select a DSM or DTM layer with pop-ups from the dropdown. `Input` line(s) by drawing or uploading a `.kml` file.
+  To draw a line, click on two points.
+  Please ensure that the line(s) provided as input are completely within the selected layer.
+
+  ![output](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/Images/Elevation%20tool/result.png)
+
+  After selecting the DSM or DTM layer and inputting the line(s), the Elevation tool will generate the result.
+
+  ![Toggle graph](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/Images/Elevation%20tool/toggleSlopeElevation.png)
+
+  You can toggle between the `slope` and `elevation` graphs by clicking on the rectangles located at the top of the graph.
+
+  ![Export](https://github.com/dp-sahu88/ODISHA_MCL/blob/main/Images/Elevation%20tool/Export.png)
+
+  Export the graph in `CSV` or `JPEG` format.
+  
